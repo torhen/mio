@@ -118,3 +118,14 @@ def read_mif(sMif):
     
     # give back dtaframe
     return df
+
+def search_files(search_path):
+    """Search all files and return a datafram"""
+    dic={'dir':[],'file':[]}
+    for root,dirs,files in os.walk(search_path):
+        dic['dir'].append(root)
+        dic['file'].append('.')
+        for file in files:
+            dic['file'].append(file)
+            dic['dir'].append(root)
+    return pd.DataFrame(dic)
