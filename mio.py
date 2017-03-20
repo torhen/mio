@@ -23,15 +23,33 @@ UNIT["Meter",1.0]]
 """
 
 def write_tab(gdf,tab_name):
-    base_dest,ext_dest= os.path.splitext(tab_name)
+
     def to_multi(row):
         geom=row.geometry
         if geom.type=='Polygon':
             geom=MultiPolygon([geom])
         return geom
 
+    
+    gdf=gdf.copy()
+    
+    # make the columns fit for Mapinfo
+    new_cols=[]
+    for s in gdf.columns:
+        s=s.replace(' ','_')
+        s=s[0:10]
+        new_cols.append(s)
+    gdf.columns=new_cols
+    
+    # make all columns to string, should be improved later
+    for a in gdf:
+        if a != gdf.geometry.name:
+            gdf[a]=gdf[a].astype('str')
+
     gdf.geometry=gdf.apply(to_multi,axis=1)
     
+    # delete files if already there
+    base_dest,ext_dest= os.path.splitext(tab_name)
     if ext_dest.lower()=='.tab':
         ext_list=['.tab','.map,','.dat','.id']
     elif ext_dest.lower()=='.mif':
