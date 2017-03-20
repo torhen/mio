@@ -4,7 +4,7 @@ import pandas as pd
 if 'geopandas' in sys.modules:
     import geopandas as gpd
     
-if 'shaply' in sys.modules:
+if 'shapely' in sys.modules:
     from shapely.geometry.multipolygon import MultiPolygon
 
 SWISS="""PROJCS["unnamed",
@@ -23,6 +23,7 @@ UNIT["Meter",1.0]]
 """
 
 def write_tab(gdf,tab_name):
+    base_dest,ext_dest= os.path.splitext(tab_name)
     def to_multi(row):
         geom=row.geometry
         if geom.type=='Polygon':
@@ -30,8 +31,16 @@ def write_tab(gdf,tab_name):
         return geom
 
     gdf.geometry=gdf.apply(to_multi,axis=1)
-    if os.path.isfile(tab_name):
-        os.remove(tab_name)
+    
+    if ext_dest.lower()=='.tab':
+        ext_list=['.tab','.map,','.dat','.id']
+    elif ext_dest.lower()=='.mif':
+        ext_list=['.mif','.mid']
+    
+    for ext in ext_list:
+        #print("removing %s" % base_dest+ext)
+        delete_if_exists(base_dest+ext)
+
     gdf.to_file(tab_name,driver='MapInfo File',crs_wkt=SWISS)    
     
 def read_grid(sFile):
@@ -129,3 +138,7 @@ def search_files(search_path):
             dic['file'].append(file)
             dic['dir'].append(root)
     return pd.DataFrame(dic)
+
+def delete_if_exists(file_name):
+    if os.path.isfile(file_name):
+        os.remove(file_name)
