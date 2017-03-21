@@ -5,7 +5,7 @@ if 'geopandas' in sys.modules:
     import geopandas as gpd
     
 if 'shapely' in sys.modules:
-    from shapely.geometry.multipolygon import MultiPolygon
+    import shapely
 
 SWISS="""PROJCS["unnamed",
 GEOGCS["unnamed",
@@ -27,7 +27,7 @@ def write_tab(gdf,tab_name):
     def to_multi(row):
         geom=row.geometry
         if geom.type=='Polygon':
-            geom=MultiPolygon([geom])
+            geom=shapely.geometry.MultiPolygon([geom])
         return geom
 
     
@@ -54,6 +54,8 @@ def write_tab(gdf,tab_name):
         ext_list=['.tab','.map,','.dat','.id']
     elif ext_dest.lower()=='.mif':
         ext_list=['.mif','.mid']
+    else:
+        sys.exit("ERROR: extension of '%s' should be .tab or .mif." % tab_name)
     
     for ext in ext_list:
         #print("removing %s" % base_dest+ext)
