@@ -22,7 +22,15 @@ PARAMETER["false_northing",200000],
 UNIT["Meter",1.0]]
 """
 
-def write_tab(gdf,tab_name):
+WGS="""GEOGCS["unnamed",
+    DATUM["WGS_1984",
+        SPHEROID["WGS 84",6378137,298.257223563],
+        TOWGS84[0,0,0,0,0,0,0]],
+    PRIMEM["Greenwich",0],
+    UNIT["degree",0.0174532925199433]]
+"""
+
+def write_tab(gdf,tab_name,crs_wkt=SWISS):
 
     def to_multi(row):
         geom=row.geometry
@@ -61,7 +69,7 @@ def write_tab(gdf,tab_name):
         #print("removing %s" % base_dest+ext)
         delete_if_exists(base_dest+ext)
 
-    gdf.to_file(tab_name,driver='MapInfo File',crs_wkt=SWISS)    
+    gdf.to_file(tab_name,driver='MapInfo File',crs_wkt=crs_wkt)    
     
 def read_grid(sFile):
     # read header
