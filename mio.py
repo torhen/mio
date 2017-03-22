@@ -37,7 +37,7 @@ def write_tab(gdf,tab_name):
     new_cols=[]
     for s in gdf.columns:
         s=s.replace(' ','_')
-        s=s[0:10]
+        s=s[0:30]
         new_cols.append(s)
     gdf.columns=new_cols
     
@@ -148,6 +148,72 @@ def read_mif(sMif):
     # give back dtaframe
     return df
 
+def write_mif(df,sMif,x=0,y=0,sCoordSys='swiss'):
+    """ Write mif, but only points implemented"""
+    sSep=";"
+    sFileTitle=os.path.splitext(sMif)[0]
+    
+    dCoordSys={}
+    dCoordSys['swiss']='CoordSys Earth Projection 25, 1003, "m", 7.4395833333, 46.9524055555, 600000, 200000'
+    dCoordSys['wgs84']='CoordSys Earth Projection 1, 104'
+    if sCoordSys in dCoordSys: sCoordSys=dCoordSys[sCoordSys]
+        
+    lColumns=[]
+    dColNames={}
+    for sFieldName in df:
+        if not sFieldName.startswith("mi_"): # skip the mai_fields
+            series=df[sFieldName]
+            sType = str(series.dtype)
+          
+            # Make fieldnames fit to mapinfo
+            sClean=""
+            for c in sFieldName:
+                if (ord(c) in range(ord('A'),ord('z')) or (ord(c) in range(ord('0'),ord('9')))):
+                    sClean=sClean+c
+                else:
+                    sClean=sClean+"_"
+            sFieldName=sClean[0:30]
+                    
+            i=0
+            while(sFieldName in dColNames):
+                s=str(i) 
+                sFieldName=sFieldName[0:len(s)]+s
+                i=i+1
+            dColNames[sFieldName]=1
+            if "int" in sType:
+                lColumns.append("%s Integer" % sFieldName)
+            elif "float" in sType:
+                lColumns.append("%s Float" % sFieldName)
+            else:
+                iLen=int(series.astype(str).map(len).max())
+                lColumns.append("%s Char(%d)" % (sFieldName,iLen))
+     
+    # write mif file header
+    fmif=open(sFileTitle+".mif","w")
+    fmif.write('Version 300\n')
+    fmif.write('Charset "Neutral"\n')
+    fmif.write('Delimiter "%s"\n' % sSep)
+    fmif.write('%s\n' % sCoordSys)
+    fmif.write('Columns %d\n' % len(lColumns))
+    for sCol in lColumns:
+        fmif.write("\t%s\n" % sCol)
+    fmif.write('Data\n\n')
+        
+    # write objects into mif
+
+    for index,row in df.iterrows():
+        if type(x)==str:
+            fx=float(row[x])
+            fy=float(row[y])
+        else:
+            fx=x
+            fy=y
+        s="Point %f %f\n" % (fx,fy)
+        fmif.write(s)
+    fmif.close()
+
+    # wrie mid file
+    df.to_csv(sFileTitle+".mid",sep=sSep,header=None,index=None)
 def search_files(search_path):
     """Search all files and return a datafram"""
     dic={'dir':[],'file':[]}
