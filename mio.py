@@ -7,7 +7,7 @@ if 'geopandas' in sys.modules:
 if 'shapely' in sys.modules:
     import shapely
 
-SWISS="""PROJCS["unnamed",
+WKT_SWISS="""PROJCS["unnamed",
 GEOGCS["unnamed",
     DATUM["Switzerland_CH_1903",
         SPHEROID["Bessel 1841",6377397.155,299.1528128],
@@ -22,20 +22,26 @@ PARAMETER["false_northing",200000],
 UNIT["Meter",1.0]]
 """
 
-WGS="""GEOGCS["unnamed",
+WKT_WGS="""GEOGCS["unnamed",
     DATUM["WGS_1984",
         SPHEROID["WGS 84",6378137,298.257223563],
         TOWGS84[0,0,0,0,0,0,0]],
     PRIMEM["Greenwich",0],
     UNIT["degree",0.0174532925199433]]
 """
+
+MIF_SWISS='CoordSys Earth Projection 25, 1003, "m", 7.4395833333, 46.9524055555, 600000, 200000'
+MIF_WGS='CoordSys Earth Projection 1, 104'
+
 def now():
     return datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S')
 
 def today():
     return datetime.datetime.now().strftime('%Y-%m-%d')
 
-def write_tab(gdf,tab_name,crs_wkt=SWISS):
+def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
+    
+    gdf=gdf.copy()
 
     def to_multi(row):
         geom=row.geometry
@@ -43,9 +49,6 @@ def write_tab(gdf,tab_name,crs_wkt=SWISS):
             geom=shapely.geometry.MultiPolygon([geom])
         return geom
 
-    
-    gdf=gdf.copy()
-    
     # make the columns fit for Mapinfo
     new_cols=[]
     for s in gdf.columns:
@@ -75,6 +78,7 @@ def write_tab(gdf,tab_name,crs_wkt=SWISS):
         delete_if_exists(base_dest+ext)
 
     gdf.to_file(tab_name,driver='MapInfo File',crs_wkt=crs_wkt)    
+    return gdf
     
 def read_grid(sFile):
     # read header
@@ -109,6 +113,7 @@ def read_grid(sFile):
 
 def write_grid(df,sFile,no_data=0):
     "write ESRI grid files"
+    df=df.copy()
     nrows, ncols= df.shape
     x0=df.columns.tolist()[0]
     x1=df.columns.tolist()[-1]
@@ -128,6 +133,7 @@ def write_grid(df,sFile,no_data=0):
     fout.write("nodata_value %d\n" % no_data)
 
     df.to_csv(fout,sep=" ",header=None,index=None)
+    return df
     
 def read_mif(sMif):
     sBase=os.path.splitext(sMif)[0]
@@ -163,6 +169,7 @@ def read_mif(sMif):
 
 def write_mif(df,sMif,x=0,y=0,sCoordSys='swiss'):
     """ Write mif, but only points implemented"""
+    df=df.copy()
     sSep=";"
     sFileTitle=os.path.splitext(sMif)[0]
     
@@ -225,8 +232,10 @@ def write_mif(df,sMif,x=0,y=0,sCoordSys='swiss'):
         fmif.write(s)
     fmif.close()
 
-    # wrie mid file
+    # write mid file
     df.to_csv(sFileTitle+".mid",sep=sSep,header=None,index=None)
+    return df
+
 def search_files(search_path):
     """Search all files and return a datafram"""
     dic={'dir':[],'file':[]}
