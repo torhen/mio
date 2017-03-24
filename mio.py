@@ -1,4 +1,4 @@
-import sys,os
+import sys,os,datetime
 import pandas as pd
 
 if 'geopandas' in sys.modules:
@@ -29,6 +29,11 @@ WGS="""GEOGCS["unnamed",
     PRIMEM["Greenwich",0],
     UNIT["degree",0.0174532925199433]]
 """
+def now():
+    return datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S')
+
+def today():
+    return datetime.datetime.now().strftime('%Y-%m-%d')
 
 def write_tab(gdf,tab_name,crs_wkt=SWISS):
 
