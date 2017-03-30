@@ -1,5 +1,6 @@
 import sys,os,datetime
 import pandas as pd
+from IPython.display import HTML
 
 if 'geopandas' in sys.modules:
     import geopandas as gpd
@@ -32,6 +33,35 @@ WKT_WGS="""GEOGCS["unnamed",
 
 MIF_SWISS='CoordSys Earth Projection 25, 1003, "m", 7.4395833333, 46.9524055555, 600000, 200000'
 MIF_WGS='CoordSys Earth Projection 1, 104'
+
+def flatten(df):
+    """ Make simple dataframe without multi columns"""
+    header=[]
+    for t in df.columns.values:
+        if type(t)==str:
+            header.append(t)
+        else:
+            header.append('_'.join(t).strip('_'))
+    df_ret=df.copy()
+    df_ret.columns=header
+    df_ret=df_ret.reset_index()
+    return df_ret
+
+# TomAugspurger ph2t.py
+def side_by_side(df1, df2, name1='', name2=''):
+    if isinstance(df1, pd.Series):
+        df1 = df1.to_frame(name=df1.name)
+    if isinstance(df2, pd.Series):
+        df2 = df2.to_frame(name=df2.name)
+    inline = 'style="display: float; max-width:50%" class="table"'
+    q = '''
+    <div class="table-responsive col-md-6">{}</div>
+    <div class="table-responsive col-md-6">{}</div>
+    '''.format(df1.style.set_table_attributes(inline)
+                  .set_caption(name1).render(),
+               df2.style.set_table_attributes(inline)
+                  .set_caption(name2).render())
+    return HTML(q)
 
 def now():
     return datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S')
