@@ -34,6 +34,11 @@ WKT_WGS="""GEOGCS["unnamed",
 MIF_SWISS='CoordSys Earth Projection 25, 1003, "m", 7.4395833333, 46.9524055555, 600000, 200000'
 MIF_WGS='CoordSys Earth Projection 1, 104'
 
+def rescue_code(function):
+    """rescues the code of a function when jipyter notebook cell is already deleted"""
+    import inspect
+    get_ipython().set_next_input("".join(inspect.getsourcelines(function)[0]))
+
 def flatten(df):
     """ Make simple dataframe without multi columns"""
     header=[]
