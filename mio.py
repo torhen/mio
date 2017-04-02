@@ -1,6 +1,7 @@
 import sys,os,datetime
 import pandas as pd
 from IPython.display import HTML
+import matplotlib.pyplot as plt
 
 if 'geopandas' in sys.modules:
     import geopandas as gpd
@@ -33,6 +34,19 @@ WKT_WGS="""GEOGCS["unnamed",
 
 MIF_SWISS='CoordSys Earth Projection 25, 1003, "m", 7.4395833333, 46.9524055555, 600000, 200000'
 MIF_WGS='CoordSys Earth Projection 1, 104'
+
+# set automatic oprions on import
+def set_options():
+    from IPython.core.interactiveshell import InteractiveShell
+    InteractiveShell.ast_node_interactivity = "all"
+    pd.set_option("display.max_rows",100)
+    pd.set_option("display.max_columns",100)
+    pd.set_option("display.max_colwidth",100)
+
+    plt.style.use('ggplot')
+    plt.style.use('seaborn-colorblind')
+set_options()
+
 
 def rescue_code(function):
     """rescues the code of a function when jipyter notebook cell is already deleted"""
