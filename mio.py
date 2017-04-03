@@ -116,12 +116,6 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
         s=s[0:30]
         new_cols.append(s)
     gdf.columns=new_cols
-    
-    # make all columns to string, should be improved later
-    for a in gdf:
-        if a != gdf.geometry.name:
-            gdf[a]=gdf[a].astype('str')
-
     gdf.geometry=gdf.apply(to_multi,axis=1)
     
     # delete files if already there
