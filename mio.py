@@ -109,11 +109,11 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
         s=s.replace(']','_')
         s=s.replace('(','_')
         s=s.replace(')','_')
-        
         for i in range(5):
             s=s.replace('__','_')
-            
+        s=s.strip('_')
         s=s[0:30]
+
         new_cols.append(s)
     gdf.columns=new_cols
     gdf.geometry=gdf.apply(to_multi,axis=1)
