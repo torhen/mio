@@ -91,6 +91,9 @@ def today():
 def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
     
     gdf=gdf.copy()
+    gdf=gdf.reset_index()
+    
+    geo_obj_type=gdf.geometry[0].geom_type
 
     def to_multi(row):
         geom=row.geometry
@@ -133,7 +136,8 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
                 styp='str:%d' % max_len
             props[col]=styp
     s={}
-    s['geometry']='MultiPolygon'
+    # set geometry type of the first object
+    s['geometry']=geo_obj_type
     s['properties']=props
 
        
@@ -151,7 +155,7 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
         delete_if_exists(base_dest+ext)
 
     gdf.to_file(tab_name,driver='MapInfo File',crs_wkt=crs_wkt,schema=s)    
-    return print(len(gdf),'rows written to mapinfo file.')
+    return print(len(gdf), 'rows of type', geo_obj_type, 'written to mapinfo file.')
     
 def read_grid(sFile):
     # read header
