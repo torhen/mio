@@ -118,7 +118,26 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
     gdf.columns=new_cols
     gdf.geometry=gdf.apply(to_multi,axis=1)
     
-    # delete files if already there
+               
+    # create my own schema (without schema all strings are 254)
+    props={}
+    for col,typ in gdf.dtypes.iteritems():
+        if col!=gdf.geometry.name:
+            if str(typ).startswith('int'):
+                styp='int'
+            elif str(typ).startswith('float'):
+                styp='float'
+            else:
+                gdf[col]=gdf[col].astype('str')  
+                max_len=gdf[col].map(len).max()
+                styp='str:%d' % max_len
+            props[col]=styp
+    s={}
+    s['geometry']='MultiPolygon'
+    s['properties']=props
+
+       
+    # delete files if already there, otherwise an error is raised
     base_dest,ext_dest= os.path.splitext(tab_name)
     if ext_dest.lower()=='.tab':
         ext_list=['.tab','.map,','.dat','.id']
@@ -131,8 +150,8 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
         #print("removing %s" % base_dest+ext)
         delete_if_exists(base_dest+ext)
 
-    gdf.to_file(tab_name,driver='MapInfo File',crs_wkt=crs_wkt)    
-    return gdf
+    gdf.to_file(tab_name,driver='MapInfo File',crs_wkt=crs_wkt,schema=s)    
+    return print(len(gdf),'rows written to mapinfo file.')
     
 def read_grid(sFile):
     # read header
