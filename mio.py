@@ -48,11 +48,6 @@ def set_options():
 set_options()
 
 
-def rescue_code(function):
-    """rescues the code of a function when jipyter notebook cell is already deleted"""
-    import inspect
-    get_ipython().set_next_input("".join(inspect.getsourcelines(function)[0]))
-
 def flatten(df):
     """ Make simple dataframe without multi columns"""
     header=[]
@@ -66,21 +61,6 @@ def flatten(df):
     df_ret=df_ret.reset_index()
     return df_ret
 
-# TomAugspurger ph2t.py
-def side_by_side(df1, df2, name1='', name2=''):
-    if isinstance(df1, pd.Series):
-        df1 = df1.to_frame(name=df1.name)
-    if isinstance(df2, pd.Series):
-        df2 = df2.to_frame(name=df2.name)
-    inline = 'style="display: float; max-width:50%" class="table"'
-    q = '''
-    <div class="table-responsive col-md-6">{}</div>
-    <div class="table-responsive col-md-6">{}</div>
-    '''.format(df1.style.set_table_attributes(inline)
-                  .set_caption(name1).render(),
-               df2.style.set_table_attributes(inline)
-                  .set_caption(name2).render())
-    return HTML(q)
 
 def now():
     return datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S')
@@ -91,27 +71,18 @@ def today():
 def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
     
     gdf=gdf.copy()
-    gdf=gdf.reset_index()
     
     geo_obj_type=gdf.geometry[0].geom_type
-
-    def to_multi(row):
-        geom=row.geometry
+    
+    # Fioana can oly save one object type per file
+    for geom in gdf.geometry:
         if geom.type=='Polygon':
-            geom=shapely.geometry.MultiPolygon([geom])
-        return geom
+            geom=shapely.geometry.MultiPolygon([geom])        
 
     # make the columns fit for Mapinfo
     new_cols=[]
     for s in gdf.columns:
-        # this cleaning code should be improved
-        s=s.replace(' ','_')
-        s=s.replace('.','_')
-        s=s.replace(':','_')
-        s=s.replace('[','_')
-        s=s.replace(']','_')
-        s=s.replace('(','_')
-        s=s.replace(')','_')
+        s=''.join([c if c.isalnum() else '_' for c in s])
         for i in range(5):
             s=s.replace('__','_')
         s=s.strip('_')
@@ -119,8 +90,6 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
 
         new_cols.append(s)
     gdf.columns=new_cols
-    gdf.geometry=gdf.apply(to_multi,axis=1)
-    
                
     # create my own schema (without schema all strings are 254)
     props={}
@@ -139,7 +108,6 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
     # set geometry type of the first object
     s['geometry']=geo_obj_type
     s['properties']=props
-
        
     # delete files if already there, otherwise an error is raised
     base_dest,ext_dest= os.path.splitext(tab_name)
