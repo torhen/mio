@@ -72,13 +72,17 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
     
     gdf=gdf.copy()
     
-    geo_obj_type=gdf.geometry[0].geom_type
-    
-    # Fioana can oly save one object type per file
-    for geom in gdf.geometry:
+    # bring multi to reduce object types (Fiona can save only on)
+    def to_multi(geom):
         if geom.type=='Polygon':
-            geom=shapely.geometry.MultiPolygon([geom])        
-
+            return shapely.geometry.MultiPolygon([geom])
+        elif geom.type=='Linen':
+            return shapely.geometry.MultiLine([geom])        
+        else:
+            return geom
+    
+    gdf.geometry=[to_multi(geom) for geom in gdf.geometry]
+    
     # make the columns fit for Mapinfo
     new_cols=[]
     for s in gdf.columns:
@@ -104,10 +108,11 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
                 max_len=gdf[col].map(len).max()
                 styp='str:%d' % max_len
             props[col]=styp
-    s={}
-    # set geometry type of the first object
-    s['geometry']=geo_obj_type
-    s['properties']=props
+            
+    schema={}
+    # set geometry type of the first object for the whole layer
+    schema['geometry']= geo_obj_type=gdf.geometry.iloc[0].geom_type
+    schema['properties']=props
        
     # delete files if already there, otherwise an error is raised
     base_dest,ext_dest= os.path.splitext(tab_name)
@@ -122,7 +127,7 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
         #print("removing %s" % base_dest+ext)
         delete_if_exists(base_dest+ext)
 
-    gdf.to_file(tab_name,driver='MapInfo File',crs_wkt=crs_wkt,schema=s)    
+    gdf.to_file(tab_name,driver='MapInfo File',crs_wkt=crs_wkt,schema=schema)    
     return print(len(gdf), 'rows of type', geo_obj_type, 'written to mapinfo file.')
     
 def read_grid(sFile):
