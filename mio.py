@@ -47,6 +47,35 @@ def set_options():
     plt.style.use('seaborn-colorblind')
 set_options()
 
+# create normed address key for matching
+def adr_key(zi,street,no):
+    zi=str(zi)
+    street=str(street)
+    no=str(no)
+    
+    # norm street
+    if ',' in  street:
+        l= street.split(',')
+        street = l[1]+l[0]
+    street=street.lower()
+    street=street.replace('str.','strasse')
+    street=street.replace('ch.','chemin')
+    street=street.replace('rte.','route')
+    
+    street=street.replace('sent.','sentier')
+    street=street.replace('av.','avenue')
+    street=street.replace('pl.','place')
+
+    street=''.join([c if c. isalnum() else '' for c in street])
+
+    # norm house number
+    no=''.join([c if c. isdigit() else '' for c in no])
+    s=''.join(no)
+    if not s:
+        s='0'
+    no=str(int(s))
+
+    return '%s_%s_%s' % (zi,street,no)
 
 def flatten(df):
     """ Make simple dataframe without multi columns"""
