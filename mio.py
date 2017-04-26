@@ -2,6 +2,8 @@ import sys,os,datetime
 import pandas as pd
 from IPython.display import HTML
 import matplotlib.pyplot as plt
+import nbformat
+from nbconvert.preprocessors import ExecutePreprocessor
 
 if 'geopandas' in sys.modules:
     import geopandas as gpd
@@ -35,6 +37,26 @@ WKT_WGS="""GEOGCS["unnamed",
 MIF_SWISS='CoordSys Earth Projection 25, 1003, "m", 7.4395833333, 46.9524055555, 600000, 200000'
 MIF_WGS='CoordSys Earth Projection 1, 104'
 
+
+def run_nb(ju_nb):
+    """Execute a jupyter notebook"""
+
+    nb = nbformat.read(open(ju_nb), as_version=4)
+    ep = ExecutePreprocessor(timeout=600, kernel_name='python3')
+    ep.preprocess(nb, {'metadata': {'path': os.path.dirname(ju_nb)}})
+    nbformat.write(nb, open(ju_nb, mode='wt'))
+    
+def main():
+    if len(sys.argv)==2:
+        nb=sys.argv[1]
+        print('starting',nb)
+        run_nb(nb)
+    else:
+        print('usage: mio.py notebook.jpynb to execute as jupyter notebook')
+
+if __name__ == "__main__":
+    main()
+
 # set automatic oprions on import
 def set_options():
     from IPython.core.interactiveshell import InteractiveShell
@@ -45,6 +67,7 @@ def set_options():
 
     plt.style.use('ggplot')
     plt.style.use('seaborn-colorblind')
+    
 set_options()
 
 
@@ -359,3 +382,33 @@ def search_files(search_path):
 def delete_if_exists(file_name):
     if os.path.isfile(file_name):
         os.remove(file_name)
+        
+def swiss_wgs(sX,sY):
+    sX=str(sX)
+    sY=str(sY)
+
+    if sX.strip()[0].isdigit():
+        x=float(sX)
+        y=float(sY)
+        x1 = (x - 600000) / 1000000
+        y1 = (y - 200000) / 1000000
+        L = 2.6779094 + 4.728982 * x1 + 0.791484 * x1 * y1 + 0.1306 * x1 * y1 * y1 - 0.0436 * x1 * x1 * x1
+        p = 16.9023892 + 3.238272 * y1 - 0.270978 * x1 * x1 - 0.002528 * y1 * y1 - 0.0447 * x1 * x1 * y1 - 0.014 * y1 * y1 * y1
+        return (L*100/36,p*100/36)
+    else:
+        return (-1,-1)
+    
+def wgs_swiss(sLon,sLat):
+    sLon=str(sLon)
+    sLat=str(sLat)
+
+    if sLon.strip()[0].isdigit():
+        Lon=float(sLon)
+        Lat=float(sLat)
+        p = (Lat * 3600 - 169028.66) / 10000
+        L = (Lon * 3600 - 26782.5) / 10000
+        y = 200147.07 + 308807.95 * p + 3745.25 * L * L + 76.63 * p * p - 194.56 * L * L * p + 119.79 * p * p * p
+        x = 600072.37 + 211455.93 * L - 10938.51 * L * p - 0.36 * L * p * p - 44.54 * L * L * L
+        return (x,y)
+    else:
+        return (-1,-1)
