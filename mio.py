@@ -47,6 +47,19 @@ def set_options():
     plt.style.use('seaborn-colorblind')
 set_options()
 
+
+def geom_point(xy):
+    return shapely.geometry.Point(xy)
+
+def geom_square(xy_center,d):
+    r=d/2
+    x,y=xy_center
+    p0=(x-r,y-r)
+    p1=(x-r,y+r)
+    p2=(x+r,y+r)
+    p3=(x+r,y-r)
+    return shapely.geometry.Polygon([p0,p1,p2,p3])
+
 # create normed address key for matching
 def adr_key(zi,street,no):
     zi=str(zi)
@@ -56,15 +69,32 @@ def adr_key(zi,street,no):
     # norm street
     if ',' in  street:
         l= street.split(',')
-        street = l[1]+l[0]
-    street=street.lower()
+        street = ''.join(reversed(l))
+        
+    
+    # add space for simpler filtering
+    street=street.lower().strip()
+    street=' %s ' % street
+    
+    # replace abbr.
     street=street.replace('str.','strasse')
     street=street.replace('ch.','chemin')
     street=street.replace('rte.','route')
-    
+    street=street.replace('bvd.','boulevard')
     street=street.replace('sent.','sentier')
     street=street.replace('av.','avenue')
     street=street.replace('pl.','place')
+    street=street.replace('imp.','impasse')
+    # if point is  forgotten
+    street=street.replace(' str ','strasse')
+    street=street.replace(' ch ','chemin')
+    street=street.replace(' rte ','route')
+    street=street.replace(' bvd ','boulevard')
+    street=street.replace(' sent ','sentier')
+    street=street.replace(' av ','avenue')
+    street=street.replace(' pl ','place')
+    street=street.replace(' imp ','impasse')
+
 
     street=''.join([c if c. isalnum() else '' for c in street])
 
