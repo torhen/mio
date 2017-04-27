@@ -1,2 +1,0 @@
-# mio
-Mapinfo input output
