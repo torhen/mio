@@ -1,0 +1,62 @@
+include "mapbasic.def"
+Declare Sub Main
+Declare Sub set_color(pl() as string)
+Declare Function AlterBrushStyle(ByVal oRegion As Object,byval iColor as integer) As Object
+
+
+
+Sub Main
+	Close All
+	Set CoordSys Earth Projection 25, 1003, "m", 7.4395833333, 46.9524055555, 600000, 200000
+	Dim str As String
+	Dim para_list(0) As String
+	
+	' read parameters
+	Open File "mb.txt" For Input As #1 
+	Do While Not EOF(1)
+
+		ReDim para_list(UBound(para_list)+1)
+		Line Input #1, para_list(UBound(para_list))
+	Loop 
+	Close File #1
+
+	' run programm
+	if para_list(1)="set_color" then call set_color(para_list) end if
+
+	end mapinfo
+
+End Sub
+
+Sub set_color(pl() as string)
+
+	Dim sSource, sDest as string
+	Dim iColor as integer
+
+	sSource=pl(2)
+	sDest = pl(3)
+	iColor=RGB( val(pl(4)), val(pl(5)), val(pl(6)) )
+
+	Close All
+	open Table sSource as T1
+	Update T1 Set obj = AlterBrushStyle(OBJ,iColor)
+
+	if sSource=sDest then
+		Commit table T1
+	else
+		Commit table T1 as sDest
+	end if
+End Sub
+
+
+
+
+Function AlterBrushStyle(ByVal oRegion As Object,byval iColor as integer) As Object
+
+	Alter Object oRegion
+        Info  OBJ_INFO_BRUSH, MakeBrush(2,iColor,-1 )
+
+	Alter Object oRegion
+        Info  OBJ_INFO_PEN, MakePen(1,1,RGB(0,0,0))
+ 
+	AlterBrushStyle = oRegion
+End Function
