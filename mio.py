@@ -265,7 +265,7 @@ def write_grid(df,sFile,no_data=0):
     fout.write("nodata_value %d\n" % no_data)
 
     df.to_csv(fout,sep=" ",header=None,index=None)
-    return df
+    return 'ascii grid written.'
     
 def read_mif(sMif):
     sBase=os.path.splitext(sMif)[0]
@@ -366,7 +366,7 @@ def write_mif(df,sMif,x=0,y=0,sCoordSys='swiss'):
 
     # write mid file
     df.to_csv(sFileTitle+".mid",sep=sSep,header=None,index=None)
-    return df
+    return 'mif file written.'
 
 def search_files(search_path):
     """Search all files and return a datafram"""
