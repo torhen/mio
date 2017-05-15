@@ -414,7 +414,9 @@ def wgs_swiss(sLon,sLat):
         return (-1,-1)
     
     
-def mb_set_color(source_tab, dest_tab,rgb):
+def mb_set_color(source_tab, dest_tab='',rgb=(0,0,0)):
+    if dest_tab=='':
+        dest_tab=source_tab
     r,g,b=rgb
     with open('mb.txt','w') as fout:
         fout.write('set_color\n%s\n%s\n%d\n%d\n%d' % (source_tab, dest_tab,r,g,b))
