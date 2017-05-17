@@ -1,15 +1,12 @@
 import sys,os,datetime
 import pandas as pd
+import geopandas as gpd
+from shapely.geometry import Point, Polygon, MultiPolygon, LineString, MultiLineString
 from IPython.display import HTML
 import matplotlib.pyplot as plt
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
-
-if 'geopandas' in sys.modules:
-    import geopandas as gpd
     
-if 'shapely' in sys.modules:
-    import shapely
 
 WKT_SWISS="""PROJCS["unnamed",
 GEOGCS["unnamed",
@@ -72,7 +69,7 @@ set_options()
 
 
 def geom_point(xy):
-    return shapely.geometry.Point(xy)
+    return Point(xy)
 
 def geom_square(xy_center,d):
     r=d/2
@@ -81,7 +78,7 @@ def geom_square(xy_center,d):
     p1=(x-r,y+r)
     p2=(x+r,y+r)
     p3=(x+r,y-r)
-    return shapely.geometry.Polygon([p0,p1,p2,p3])
+    return Polygon([p0,p1,p2,p3])
 
 # create normed address key for matching
 def adr_key(zi,street,no):
@@ -147,6 +144,9 @@ def flatten(df):
 def now():
     return datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S')
 
+def now2():
+    return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
 def today():
     return datetime.datetime.now().strftime('%Y-%m-%d')
 
@@ -157,9 +157,9 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
     # bring multi to reduce object types (Fiona can save only on)
     def to_multi(geom):
         if geom.type=='Polygon':
-            return shapely.geometry.MultiPolygon([geom])
-        elif geom.type=='Linen':
-            return shapely.geometry.MultiLine([geom])        
+            return MultiPolygon([geom])
+        elif geom.type=='Line':
+            return MultiLine([geom])        
         else:
             return geom
     
@@ -210,7 +210,7 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
         delete_if_exists(base_dest+ext)
 
     gdf.to_file(tab_name,driver='MapInfo File',crs_wkt=crs_wkt,schema=schema)    
-    return print(len(gdf), 'rows of type', geo_obj_type, 'written to mapinfo file.')
+    return print(len(gdf), 'rows of type', geo_obj_type, 'written to mapinfo file.', now2())
     
 def read_grid(sFile):
     # read header
@@ -413,11 +413,10 @@ def wgs_swiss(sLon,sLat):
     else:
         return (-1,-1)
     
-    
-def mb_set_color(source_tab, dest_tab='',rgb=(0,0,0)):
-    if dest_tab=='':
-        dest_tab=source_tab
-    r,g,b=rgb
-    with open('mb.txt','w') as fout:
-        fout.write('set_color\n%s\n%s\n%d\n%d\n%d' % (source_tab, dest_tab,r,g,b))
+def run_mb(mb_script):
+    delete_if_exists('mb.mb')
+    delete_if_exists('mb.mbx')
+    with open('mb.mb','w') as fout: 
+        fout.write(mb_script)
+    os.system('"C:\Program Files (x86)\MapInfo\MapBasic\mapbasic.exe" -D mb.mb')
     os.system('mb.mbx')
