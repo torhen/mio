@@ -414,9 +414,10 @@ def wgs_swiss(sLon,sLat):
         return (-1,-1)
     
 def run_mb(mb_script):
+    """ run a Mapbasic Script, mapinfo and mapbasic folders have to be defined in the environment variable PATH"""
     delete_if_exists('mb.mb')
     delete_if_exists('mb.mbx')
     with open('mb.mb','w') as fout: 
         fout.write(mb_script)
-    os.system('"C:\Program Files (x86)\MapInfo\MapBasic\mapbasic.exe" -D mb.mb')
-    os.system('mb.mbx')
+    os.system('mapbasic.exe -D mb.mb')
+    os.system('mapinfow.exe mb.mbx')
