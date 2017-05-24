@@ -1,4 +1,4 @@
-import sys,os,subprocess,datetime
+import sys,os,datetime
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point, Polygon, MultiPolygon, LineString, MultiLineString
@@ -58,9 +58,9 @@ if __name__ == "__main__":
 def set_options():
     from IPython.core.interactiveshell import InteractiveShell
     InteractiveShell.ast_node_interactivity = "all"
-    pd.set_option("display.max_rows",100)
-    pd.set_option("display.max_columns",100)
-    pd.set_option("display.max_colwidth",100)
+    pd.set_option("display.max_rows",255)
+    pd.set_option("display.max_columns",255)
+    pd.set_option("display.max_colwidth",1024)
 
     plt.style.use('ggplot')
     plt.style.use('seaborn-colorblind')
@@ -417,15 +417,7 @@ def run_mb(mb_script):
     """ run a Mapbasic Script, mapinfo and mapbasic folders have to be defined in the environment variable PATH"""
     delete_if_exists('mb.mb')
     delete_if_exists('mb.mbx')
-    delete_if_exists('mb.err')
     with open('mb.mb','w') as fout: 
         fout.write(mb_script)
-    subprocess.run('mapbasic.exe -D mb.mb',stdout=subprocess.PIPE,encoding='latin-1')
-    if os.path.isfile('mb.err'):
-        print('Error compiling mb.mb:')
-        with open('mb.err') as ferr:
-            for s in ferr:
-                print(s)
-    else:
-        subprocess.run('mapinfow.exe mb.mbx')
-    
+    os.system('mapbasic.exe -D mb.mb')
+    os.system('mapinfow.exe mb.mbx')
