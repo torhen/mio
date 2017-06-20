@@ -1,5 +1,6 @@
 import sys,os,datetime
 import pandas as pd
+import numpy as np
 import geopandas as gpd
 from shapely.geometry import Point, Polygon, MultiPolygon, LineString, MultiLineString
 from IPython.display import HTML
@@ -151,7 +152,7 @@ def today():
     return datetime.datetime.now().strftime('%Y-%m-%d')
 
 def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
-    
+        
     gdf=gdf.copy()
     
     # bring multi to reduce object types (Fiona can save only on)
@@ -188,12 +189,21 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
             else:
                 gdf[col]=gdf[col].astype('str')  
                 max_len=gdf[col].map(len).max()
+                if np.isnan(max_len):
+                    max_len=1
                 styp='str:%d' % max_len
             props[col]=styp
             
     schema={}
     # set geometry type of the first object for the whole layer
-    schema['geometry']= geo_obj_type=gdf.geometry.iloc[0].geom_type
+    if len(gdf)>0:
+        geo_obj_type=gdf.geometry.iloc[0].geom_type
+
+    else:
+        geo_obj_type = 'Point'
+        
+    schema['geometry']= geo_obj_type
+        
     schema['properties']=props
        
     # delete files if already there, otherwise an error is raised
