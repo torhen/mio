@@ -7,7 +7,7 @@ from IPython.display import HTML
 import matplotlib.pyplot as plt
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
-    
+import win32com.client
 
 WKT_SWISS="""PROJCS["unnamed",
 GEOGCS["unnamed",
@@ -68,6 +68,20 @@ def set_options():
     
 set_options()
 
+def refresh_excel(excel_file):
+    excel_file=os.path.abspath(excel_file)
+    xlapp = win32com.client.DispatchEx("Excel.Application")
+    wb = xlapp.workbooks.open(excel_file)
+    xlapp.Visible = True
+    wb.RefreshAll()
+    count = wb.Sheets.Count
+    for i in range(count):
+        ws = wb.Worksheets[i]
+        pivotCount = ws.PivotTables().Count
+        for j in range(1, pivotCount+1):
+            ws.PivotTables(j).PivotCache().Refresh()
+    wb.Save()
+    xlapp.Quit()
 
 def geom_point(xy):
     return Point(xy)
