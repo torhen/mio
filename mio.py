@@ -1,8 +1,8 @@
 import sys,os,datetime
 import pandas as pd
 import numpy as np
-import geopandas as gpd
-from shapely.geometry import Point, Polygon, MultiPolygon, LineString, MultiLineString
+#import geopandas as gpd
+#from shapely.geometry import Point, Polygon, MultiPolygon, LineString, MultiLineString
 from IPython.display import HTML
 import matplotlib.pyplot as plt
 import nbformat
@@ -42,7 +42,10 @@ def run_nb(ju_nb):
     nb = nbformat.read(open(ju_nb), as_version=4)
     ep = ExecutePreprocessor(timeout=600, kernel_name='python3')
     ep.preprocess(nb, {'metadata': {'path': os.path.dirname(ju_nb)}})
-    nbformat.write(nb, open(ju_nb, mode='wt'))
+    # write sometimes destroys the notebook!
+    # better just write a copy
+    new_nb_name=os.path.splitext(ju_nb)[0]+'_last_run.ipynb'
+    nbformat.write(nb, open(new_nb_name, mode='wt'))
     
 def main():
     if len(sys.argv)==2:
@@ -67,6 +70,17 @@ def set_options():
     plt.style.use('seaborn-colorblind')
     
 set_options()
+
+# no unicode characters
+def clean(s):
+    s=str(s)
+    l=[]
+    for c in s:
+        if ord(c)<256:
+            l.append(c)
+        else:
+            l.append('&#%d;' % ord(c))    
+    return ''.join(l)
 
 def refresh_excel(excel_file):
     excel_file=os.path.abspath(excel_file)
