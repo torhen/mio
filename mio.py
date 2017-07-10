@@ -1,13 +1,15 @@
 import sys,os,datetime
 import pandas as pd
 import numpy as np
-#import geopandas as gpd
-#from shapely.geometry import Point, Polygon, MultiPolygon, LineString, MultiLineString
+import geopandas as gpd
+from shapely.geometry import Point, Polygon, MultiPolygon, LineString, MultiLineString, shape
 from IPython.display import HTML
 import matplotlib.pyplot as plt
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 import win32com.client
+import rasterio
+import affine
 
 WKT_SWISS="""PROJCS["unnamed",
 GEOGCS["unnamed",
@@ -62,14 +64,72 @@ if __name__ == "__main__":
 def set_options():
     from IPython.core.interactiveshell import InteractiveShell
     InteractiveShell.ast_node_interactivity = "all"
-    pd.set_option("display.max_rows",255)
-    pd.set_option("display.max_columns",255)
+    pd.set_option("display.max_rows",100)
+    pd.set_option("display.max_columns",100)
     pd.set_option("display.max_colwidth",1024)
 
     plt.style.use('ggplot')
     plt.style.use('seaborn-colorblind')
     
 set_options()
+
+def read_raster(raster_file):
+    """ Read a raster file and return a list of dataframes"""
+    ds = rasterio.open(raster_file)
+    t = ds.transform
+    df_list = []
+    # band counts is based 1
+    for i in range (1,ds.count+1):
+        a = ds.read(i)
+        df = pd.DataFrame(a)
+        
+        # set index and columns to world coordinates
+        df.columns = [ (t* (x,0))[0] for x in df.columns]
+        df.index = [ (t* (0,y))[1] for y in df.index]
+        
+        df_list.append (df)
+    ds.close()
+    return df_list
+
+def write_raster(df_list,dest_file):
+    """ write df raster list to geo tiff together with world file"""
+    t = calc_affine(df_list[0])
+    # calc dimensions
+    bands = len(df_list)
+    h, w = df_list[0].shape
+
+    dst = rasterio.open(dest_file, 'w', driver='GTiff',width=w, height=h, count=bands, dtype='uint8',transform=t,tfw='YES')
+
+    for i in range(bands):
+        a = df_list[0].values
+        a = a.astype('uint8')
+        dst.write(a,i+1)
+    dst.close()
+    
+def calc_affine(df):
+    ###generate transorm affine object from raster data frame ###
+    test = df.iloc[0:2,0:2]
+    x0 = test.columns[0]
+    y0 = test.index[0]
+    xs = test.columns[1]-test.columns[0]
+    ys = test.index[1]-test.index[0]
+    
+    t = affine.Affine(xs,0,x0,0,ys,y0)
+    return t
+
+def vectorize(df):
+    ### make shapes from raster, genial! ###
+    t = calc_affine(df)
+    a = df.values
+    maske = (df != 0)
+    gdf = gpd.GeoDataFrame()
+    geoms  = []
+    for s,v in rasterio.features.shapes(a,transform=t,mask=maske.values):
+        geoms.append(shape(s))
+
+    gdf['geometry'] = geoms
+    gdf = gdf.set_geometry('geometry')
+    return gdf
 
 # no unicode characters
 def clean(s):
