@@ -124,13 +124,37 @@ def vectorize(df):
     maske = (df != 0)
     gdf = gpd.GeoDataFrame()
     geoms  = []
+    values = []
     for s,v in rasterio.features.shapes(a,transform=t,mask=maske.values):
         geoms.append(shape(s))
-
+        values.append(v)
     gdf['geometry'] = geoms
     gdf = gdf.set_geometry('geometry')
+    gdf['value']=values
     return gdf
 
+def rasterize(gdf,pixel_size,value_step=-10):
+    ### make arry from geo data frame ###
+    geom_value_list = [ (geom,(i+1) * value_step) for i,geom in enumerate(gdf.geometry)] 
+    x0,y0,x1,y1 = gdf.unary_union.bounds
+    
+    ulx=pixel_size*int(x0/pixel_size)
+    uly=pixel_size*int(y1/pixel_size)+pixel_size
+    
+    drx=pixel_size*int(x1/pixel_size)+pixel_size
+    dry=pixel_size*int(y0/pixel_size)
+    
+    w,h = int((drx-ulx)/pixel_size), int((uly-dry)/pixel_size)
+    
+    t = affine.Affine(pixel_size,0,ulx,0,-pixel_size,uly)
+    
+    result = rasterio.features.rasterize(geom_value_list,out_shape=(h,w),transform=t,fill=0)
+    
+    df = pd.DataFrame(result)
+    df.columns = [(t*(x,0))[0] for x in df.columns]
+    df.index = [(t*(0,y))[1] for y in df.index]
+    
+    return df
 # no unicode characters
 def clean(s):
     s=str(s)
