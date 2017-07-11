@@ -181,17 +181,6 @@ def refresh_excel(excel_file):
     wb.Save()
     xlapp.Quit()
 
-def geom_point(xy):
-    return Point(xy)
-
-def geom_square(xy_center,d):
-    r=d/2
-    x,y=xy_center
-    p0=(x-r,y-r)
-    p1=(x-r,y+r)
-    p2=(x+r,y+r)
-    p3=(x+r,y-r)
-    return Polygon([p0,p1,p2,p3])
 
 # create normed address key for matching
 def adr_key(zi,street,no):
@@ -334,60 +323,6 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
     gdf.to_file(tab_name,driver='MapInfo File',crs_wkt=crs_wkt,schema=schema)    
     return print(len(gdf), 'rows of type', geo_obj_type, 'written to mapinfo file.', now2())
     
-def read_grid(sFile):
-    # read header
-    dic={}
-    fin=open(sFile)
-    iHeader=0
-    for i in range(8):
-        l=next(fin).strip().split()
-        if len(l)>2:
-            break
-        iHeader=iHeader+1
-        dic[l[0].lower()]=l[1]
-
-    df_data=pd.read_csv(sFile,skiprows=iHeader,delim_whitespace=True,header=None)
-    
-    # set indexes and columns
-    
-    ncols=int(dic['ncols'])
-    nrows=int(dic['nrows'])
-    xllcorner=float(dic['xllcorner'])
-    yllcorner=float(dic['yllcorner'])
-    cellsize=float(dic['cellsize'])
-    
-    lCols=[xllcorner+i*cellsize for i in range(ncols)]
-    ystart=yllcorner+nrows*cellsize
-    df_data.columns=lCols
-    lRows=[ystart-i*cellsize for i in range(nrows)]
-    df_data.index=lRows
-    
-    return df_data
-
-
-def write_grid(df,sFile,no_data=0):
-    "write ESRI grid files"
-    df=df.copy()
-    nrows, ncols= df.shape
-    x0=df.columns.tolist()[0]
-    x1=df.columns.tolist()[-1]
-    
-    y0=(df.index.tolist()[-1])
-    y1=(df.index.tolist()[0])
-    
-    cs=(x1-x0)/(ncols-1)
-    
-    fout=open(sFile,"w")
-    fout.write("ncols %d\n" % ncols)
-    fout.write("nrows %d\n" % nrows)
-    
-    fout.write("xllcorner %f\n" % x0)
-    fout.write("yllcorner %f\n" % (y0-cs))
-    fout.write("cellsize %f\n" % cs)
-    fout.write("nodata_value %d\n" % no_data)
-
-    df.to_csv(fout,sep=" ",header=None,index=None)
-    return 'ascii grid written.'
     
 def read_mif(sMif):
     sBase=os.path.splitext(sMif)[0]
