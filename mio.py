@@ -9,6 +9,7 @@ import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 import win32com.client
 import rasterio
+import rasterio.features
 import affine
 
 WKT_SWISS="""PROJCS["unnamed",
@@ -93,6 +94,11 @@ def read_raster(raster_file):
 
 def write_raster(df_list,dest_file):
     """ write df raster list to geo tiff together with world file"""
+    
+    # in case arguent is data frame
+    if isinstance(df_list, pd.DataFrame):
+        df_list = [df_list]
+    
     t = calc_affine(df_list[0])
     # calc dimensions
     bands = len(df_list)
@@ -124,18 +130,18 @@ def vectorize(df):
     maske = (df != 0)
     gdf = gpd.GeoDataFrame()
     geoms  = []
-    values = []
+    value = []
     for s,v in rasterio.features.shapes(a,transform=t,mask=maske.values):
         geoms.append(shape(s))
-        values.append(v)
+        value.append(v)
     gdf['geometry'] = geoms
     gdf = gdf.set_geometry('geometry')
-    gdf['value']=values
+    gdf['value']=value
     return gdf
 
-def rasterize(gdf,pixel_size,value_step=-10):
+def rasterize(gdf,pixel_size,value=255):
     ### make arry from geo data frame ###
-    geom_value_list = [ (geom,(i+1) * value_step) for i,geom in enumerate(gdf.geometry)] 
+    geom_value_list = [ (geom,value) for i,geom in enumerate(gdf.geometry)] 
     x0,y0,x1,y1 = gdf.unary_union.bounds
     
     ulx=pixel_size*int(x0/pixel_size)
