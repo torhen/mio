@@ -113,7 +113,7 @@ def write_raster(df_list,dest_file):
     dst.close()
     
 def calc_affine(df):
-    ###generate transorm affine object from raster data frame ###
+    """generate transorm affine object from raster data frame """
     test = df.iloc[0:2,0:2]
     x0 = test.columns[0]
     y0 = test.index[0]
@@ -124,7 +124,7 @@ def calc_affine(df):
     return t
 
 def vectorize(df):
-    ### make shapes from raster, genial! ###
+    """ make shapes from raster, genial! """
     t = calc_affine(df)
     a = df.values
     maske = (df != 0)
@@ -139,10 +139,17 @@ def vectorize(df):
     gdf['value']=value
     return gdf
 
-def rasterize(gdf,pixel_size,value=255):
-    ### make arry from geo data frame ###
-    geom_value_list = [ (geom,value) for i,geom in enumerate(gdf.geometry)] 
-    x0,y0,x1,y1 = gdf.unary_union.bounds
+def rasterize(gdf,pixel_size,value=None):
+    """ make arry from geo data frame,
+    if value = None enumrate shapes starting by 0
+    else burn value
+    """
+    if value==None:
+        geom_value_list = [ (geom,i) for i, geom in enumerate(gdf.geometry)] 
+    else:
+        geom_value_list = [ (geom,value) for i, geom in enumerate(gdf.geometry)] 
+        
+    x0,y0,x1,y1 = gdf.total_bounds
     
     ulx=pixel_size*int(x0/pixel_size)
     uly=pixel_size*int(y1/pixel_size)+pixel_size
@@ -154,7 +161,7 @@ def rasterize(gdf,pixel_size,value=255):
     
     t = affine.Affine(pixel_size,0,ulx,0,-pixel_size,uly)
     
-    result = rasterio.features.rasterize(geom_value_list,out_shape=(h,w),transform=t,fill=0)
+    result = rasterio.features.rasterize(geom_value_list,out_shape=(h,w),transform=t,fill=-1)
     
     df = pd.DataFrame(result)
     df.columns = [(t*(x,0))[0] for x in df.columns]
