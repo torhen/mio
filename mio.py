@@ -12,6 +12,7 @@ import rasterio
 import rasterio.features
 import affine
 
+
 WKT_SWISS="""PROJCS["unnamed",
 GEOGCS["unnamed",
     DATUM["Switzerland_CH_1903",
@@ -139,15 +140,18 @@ def vectorize(df):
     gdf['value']=value
     return gdf
 
-def rasterize(gdf,pixel_size,value=None):
+def rasterize(gdf,pixel_size,values=None):
     """ make arry from geo data frame,
-    if value = None enumrate shapes starting by 0
-    else burn value
+    if value = None enumrate shapes starting by 0, empty = -1
+    else burn value = (empty_value, burn_value)
     """
-    if value==None:
+    if values==None:
+        fill = -1
         geom_value_list = [ (geom,i) for i, geom in enumerate(gdf.geometry)] 
     else:
-        geom_value_list = [ (geom,value) for i, geom in enumerate(gdf.geometry)] 
+        fill = values[0]
+        geom_value_list = [ (geom,values[1]) for i, geom in enumerate(gdf.geometry)] 
+        
         
     x0,y0,x1,y1 = gdf.total_bounds
     
@@ -161,7 +165,7 @@ def rasterize(gdf,pixel_size,value=None):
     
     t = affine.Affine(pixel_size,0,ulx,0,-pixel_size,uly)
     
-    result = rasterio.features.rasterize(geom_value_list,out_shape=(h,w),transform=t,fill=-1)
+    result = rasterio.features.rasterize(geom_value_list,out_shape=(h,w),transform=t,fill=fill)
     
     df = pd.DataFrame(result)
     df.columns = [(t*(x,0))[0] for x in df.columns]
