@@ -1,15 +1,21 @@
+USE_GEOPANDAS = True
+
 import sys,os,datetime
 import pandas as pd
 import numpy as np
-import geopandas as gpd
-from shapely.geometry import Point, Polygon, MultiPolygon, LineString, MultiLineString, shape
+
+if USE_GEOPANDAS:
+    import geopandas as gpd
+    from shapely.geometry import Point, Polygon, MultiPolygon, LineString, MultiLineString, shape
+    import rasterio
+    import rasterio.features
+    
 from IPython.display import HTML
 import matplotlib.pyplot as plt
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 import win32com.client
-import rasterio
-import rasterio.features
+
 import affine
 
 
