@@ -92,8 +92,8 @@ def read_raster(raster_file):
         df = pd.DataFrame(a)
         
         # set index and columns to world coordinates
-        df.columns = [ (t* (x,0))[0] for x in df.columns]
-        df.index = [ (t* (0,y))[1] for y in df.index]
+        df.columns = [ (t * (x,0))[0] for x in df.columns]
+        df.index = [ ( t* (0,y))[1] for y in df.index]
         
         df_list.append (df)
     ds.close()
@@ -134,7 +134,8 @@ def vectorize(df):
     """ make shapes from raster, genial! """
     t = calc_affine(df)
     a = df.values
-    maske = (df != 0)
+    # zeros an nan are left open space, means mask = True!
+    maske = (df != 0).fillna(True)
     gdf = gpd.GeoDataFrame()
     geoms  = []
     value = []
@@ -143,7 +144,7 @@ def vectorize(df):
         value.append(v)
     gdf['geometry'] = geoms
     gdf = gdf.set_geometry('geometry')
-    gdf['value']=value
+    gdf['val']=value
     return gdf
 
 def rasterize(gdf,pixel_size,values=None):
