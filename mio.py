@@ -48,7 +48,11 @@ MIF_WGS='CoordSys Earth Projection 1, 104'
 
 def run_nb(ju_nb):
     """Execute a jupyter notebook"""
-
+    if len(sys.argv)>2:
+        os.environ["JUPYTER_PARAMETER"] = sys.argv[2]
+    else:
+        os.environ["JUPYTER_PARAMETER"] = ""
+    # the jupyter notebook can retrieve os.environ["JUPYTER_PARAMETER"]
     nb = nbformat.read(open(ju_nb), as_version=4)
     ep = ExecutePreprocessor(timeout=600, kernel_name='python3')
     ep.preprocess(nb, {'metadata': {'path': os.path.dirname(ju_nb)}})
@@ -58,8 +62,8 @@ def run_nb(ju_nb):
     nbformat.write(nb, open(new_nb_name, mode='wt'))
     
 def main():
-    if len(sys.argv)==2:
-        nb=sys.argv[1]
+    if len(sys.argv)>1:
+        nb = sys.argv[1]
         print('starting',nb)
         run_nb(nb)
     else:
