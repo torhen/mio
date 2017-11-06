@@ -97,31 +97,47 @@ def read_raster(raster_file):
         
         # set index and columns to world coordinates
         df.columns = [ (t * (x,0))[0] for x in df.columns]
-        df.index = [ ( t* (0,y))[1] for y in df.index]
+        df.index = [ ( t * (0,y))[1] for y in df.index]
         
         df_list.append (df)
     ds.close()
     return df_list
 
-def write_raster(df_list,dest_file):
+def read_raster_binary(source, dtype, width, height, transform):
+    ### read raster from binary file , e.g. .bil ###
+    raw = np.fromfile(source, dtype=dtype)
+    a = np.resize(raw, (height,width))
+    df = pd.DataFrame(a)
+    t = affine.Affine(*transform)
+    df.columns = [(t*(x,0))[0] for x in df.columns]
+    df.index   = [(t*(0,y))[1] for y in df.index]
+    return df
+
+def write_raster(df_list, dest_file, color_map=0):
     """ write df raster list to geo tiff together with world file"""
     
-    # in case arguent is data frame
+    # in case arguent is data frame, not list
     if isinstance(df_list, pd.DataFrame):
         df_list = [df_list]
     
+    # create an affine object
     t = calc_affine(df_list[0])
-    # calc dimensions
+
+    # get dimension
     bands = len(df_list)
     h, w = df_list[0].shape
+    
+    # build one 3-dimensional array from the df list
+    l = [df.values for df in df_list]
+    a = np.array(l)
+    dtype = a.dtype
 
-    dst = rasterio.open(dest_file, 'w', driver='GTiff',width=w, height=h, count=bands, dtype='uint8',transform=t,tfw='YES')
+    # write raster, add color_map if defined, TFW = YES: create woldfile!
+    with rasterio.open(dest_file, mode='w', driver='GTiff', width=w, height=h, count=bands, dtype=dtype, transform=t, tfw='YES') as dst:
+        dst.write(a)
+        if color_map:
+            dst.write_colormap(1, color_map)
 
-    for i in range(bands):
-        a = df_list[0].values
-        a = a.astype('uint8')
-        dst.write(a,i+1)
-    dst.close()
     
 def calc_affine(df):
     """generate transorm affine object from raster data frame """
