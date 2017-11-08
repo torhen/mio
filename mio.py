@@ -106,7 +106,7 @@ def read_raster(raster_file):
 def read_raster_binary(source, dtype, width, height, transform):
     ### read raster from binary file , e.g. .bil ###
     raw = np.fromfile(source, dtype=dtype)
-    a = np.resize(raw, (height,width))
+    a = raw.reshape(height,width)
     df = pd.DataFrame(a)
     t = affine.Affine(*transform)
     df.columns = [(t*(x,0))[0] for x in df.columns]
@@ -141,13 +141,14 @@ def write_raster(df_list, dest_file, color_map=0):
     
 def calc_affine(df):
     """generate transorm affine object from raster data frame """
-    test = df.iloc[0:2,0:2]
-    x0 = test.columns[0]
-    y0 = test.index[0]
-    xs = test.columns[1]-test.columns[0]
-    ys = test.index[1]-test.index[0]
+
+    x0 = df.columns[0]
+    y0 = df.index[0]
+    dx = df.columns[1] - df.columns[0]
+    dy = df.index[1] - df.index[0]
     
-    t = affine.Affine(xs,0,x0,0,ys,y0)
+    t = affine.Affine(dx, 0, x0 , 0,dy ,y0 ) 
+    # x0 + dx because anker point is in the south!
     return t
 
 def vectorize(df):
