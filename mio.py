@@ -89,6 +89,7 @@ def read_raster(raster_file):
     """ Read a raster file and return a list of dataframes"""
     ds = rasterio.open(raster_file)
     t = ds.transform
+   
     df_list = []
     # band counts is based 1
     for i in range (1,ds.count+1):
@@ -96,8 +97,10 @@ def read_raster(raster_file):
         df = pd.DataFrame(a)
         
         # set index and columns to world coordinates
-        df.columns = [ (t * (x,0))[0] for x in df.columns]
-        df.index = [ ( t * (0,y))[1] for y in df.index]
+        df.columns = [ (t * (x, 0))[0] for x in df.columns]
+        df.index =   [ ( t * (0 ,y + 1))[1] for y in df.index]
+        # y + 1 because of rasterios transformation is for images, not for my dataframe
+        # in my datafae I want to keep the lower left corner as index value, not the upper left
         
         df_list.append (df)
     ds.close()
@@ -114,7 +117,10 @@ def read_raster_binary(source, dtype, width, height, transform):
     return df
 
 def write_raster(df_list, dest_file, color_map=0):
-    """ write df raster list to geo tiff together with world file"""
+    """ write df raster list to geo tiff together with world file, or Arcview ESRI grid text file"""
+    
+    driver_dict = {'.tif': 'GTiff', '.txt': 'AAIGrid', '.asc': 'AAIGrid'}
+    driver_string = driver_dict[os.path.splitext('test.txt')[1].lower()]
     
     # in case arguent is data frame, not list
     if isinstance(df_list, pd.DataFrame):
@@ -133,7 +139,7 @@ def write_raster(df_list, dest_file, color_map=0):
     dtype = a.dtype
 
     # write raster, add color_map if defined, TFW = YES: create woldfile!
-    with rasterio.open(dest_file, mode='w', driver='GTiff', width=w, height=h, count=bands, dtype=dtype, transform=t, tfw='YES') as dst:
+    with rasterio.open(dest_file, mode='w', driver=driver_string, width=w, height=h, count=bands, dtype=dtype, transform=t, tfw='YES') as dst:
         dst.write(a)
         if color_map:
             dst.write_colormap(1, color_map)
@@ -147,8 +153,8 @@ def calc_affine(df):
     dx = df.columns[1] - df.columns[0]
     dy = df.index[1] - df.index[0]
     
-    t = affine.Affine(dx, 0, x0 , 0,dy ,y0 ) 
-    # x0 + dx because anker point is in the south!
+    t = affine.Affine(dx, 0, x0 , 0, dy ,y0 - dy) 
+    # y0 - dy because anker point is in the south!
     return t
 
 def vectorize(df):
