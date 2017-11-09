@@ -117,10 +117,12 @@ def read_raster_binary(source, dtype, width, height, transform):
     return df
 
 def write_raster(df_list, dest_file, color_map=0):
-    """ write df raster list to geo tiff together with world file, or Arcview ESRI grid text file"""
+    """ write df raster list to geo tiff together with world file, or Arcview ESRI grid text file
+        df  must be 'uint8' to apply color map
+    """
     
     driver_dict = {'.tif': 'GTiff', '.txt': 'AAIGrid', '.asc': 'AAIGrid'}
-    driver_string = driver_dict[os.path.splitext('test.txt')[1].lower()]
+    driver_string = driver_dict[os.path.splitext(dest_file)[1].lower()]
     
     # in case arguent is data frame, not list
     if isinstance(df_list, pd.DataFrame):
