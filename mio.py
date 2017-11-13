@@ -9,6 +9,8 @@ if USE_GEOPANDAS:
     from shapely.geometry import Point, Polygon, MultiPolygon, LineString, MultiLineString, shape
     import rasterio
     import rasterio.features
+    import rasterio.mask
+    import fiona
     
 from IPython.display import HTML
 import matplotlib.pyplot as plt
@@ -176,48 +178,16 @@ def vectorize(df):
     gdf['val']=value
     return gdf
 
-def rasterize(gdf,pixel_size,values=None):
-    """ make arry from geo data frame,
-    if value = None enumrate shapes starting by 0, empty = -1
-    else burn value = (empty_value, burn_value)
-    """
-    if values==None:
-        fill = -1
-        geom_value_list = [ (geom,i) for i, geom in enumerate(gdf.geometry)] 
-    else:
-        fill = values[0]
-        geom_value_list = [ (geom,values[1]) for i, geom in enumerate(gdf.geometry)] 
-        
-        
-    x0,y0,x1,y1 = gdf.total_bounds
-    
-    ulx=pixel_size*int(x0/pixel_size)
-    uly=pixel_size*int(y1/pixel_size)+pixel_size
-    
-    drx=pixel_size*int(x1/pixel_size)+pixel_size
-    dry=pixel_size*int(y0/pixel_size)
-    
-    w,h = int((drx-ulx)/pixel_size), int((uly-dry)/pixel_size)
-    
-    t = affine.Affine(pixel_size,0,ulx,0,-pixel_size,uly)
-    
-    result = rasterio.features.rasterize(geom_value_list,out_shape=(h,w),transform=t,fill=fill)
-    
-    df = pd.DataFrame(result)
-    df.columns = [(t*(x,0))[0] for x in df.columns]
-    df.index = [(t*(0,y))[1] for y in df.index]
-    
-    return df
-# no unicode characters
-def clean(s):
-    s=str(s)
-    l=[]
-    for c in s:
-        if ord(c)<256:
-            l.append(c)
-        else:
-            l.append('&#%d;' % ord(c))    
-    return ''.join(l)
+def rasterize(raster_df, vector_gdf, fill=128, all_touched=False):
+    geom_value_list = [ (geom,i) for i, geom in enumerate(vector_gdf.geometry)] 
+    t = calc_affine(raster_df)
+    result = rasterio.features.rasterize(geom_value_list, 
+                                         out_shape=raster_df.shape, 
+                                         transform=t, 
+                                         fill=fill, 
+                                         all_touched=all_touched)
+    res_df = pd.DataFrame(result, columns=raster_df.columns, index=raster_df.index)
+    return res_df
 
 def refresh_excel(excel_file):
     excel_file=os.path.abspath(excel_file)
