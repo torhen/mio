@@ -100,7 +100,7 @@ def read_raster(raster_file):
         
         # set index and columns to world coordinates
         df.columns = [ (t * (x, 0))[0] for x in df.columns]
-        df.index =   [ ( t * (0 ,y + 1))[1] for y in df.index]
+        df.index =   [ (t * (0 ,y + 1))[1] for y in df.index]
         # y + 1 because of rasterios transformation is for images, not for my dataframe
         # in my datafae I want to keep the lower left corner as index value, not the upper left
         
@@ -178,8 +178,10 @@ def vectorize(df):
     gdf['val']=value
     return gdf
 
-def rasterize(raster_df, vector_gdf, fill=128, all_touched=False):
-    geom_value_list = [ (geom,i) for i, geom in enumerate(vector_gdf.geometry)] 
+def rasterize(vector_gdf, raster_df, fill=0, all_touched=False):
+    """ burn vector features into a raster """
+    # starting with 1 to leafe zero for filling 
+    geom_value_list = [ (geom, i + 1) for i, geom in enumerate(vector_gdf.geometry)] 
     t = calc_affine(raster_df)
     result = rasterio.features.rasterize(geom_value_list, 
                                          out_shape=raster_df.shape, 
@@ -252,28 +254,6 @@ def adr_key(zi,street,no):
 
     return '%s_%s_%s' % (zi,street,no)
 
-def flatten(df):
-    """ Make simple dataframe without multi columns"""
-    header=[]
-    for t in df.columns.values:
-        if type(t)==str:
-            header.append(t)
-        else:
-            header.append('_'.join(t).strip('_'))
-    df_ret=df.copy()
-    df_ret.columns=header
-    df_ret=df_ret.reset_index()
-    return df_ret
-
-
-def now():
-    return datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S')
-
-def now2():
-    return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-def today():
-    return datetime.datetime.now().strftime('%Y-%m-%d')
 
 def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
         
