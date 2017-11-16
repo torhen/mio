@@ -178,19 +178,22 @@ def vectorize(df):
     gdf['val']=value
     return gdf
 
-def rasterize(vector_gdf, raster_df, values_to_burn, fill=0, all_touched=False):
+def rasterize(vector_gdf, raster_df, values_to_burn=128, fill=0, all_touched=False):
     """ burn vector features into a raster """
-    # starting with 1 to leafe zero for filling 
     
-    geom_value_list = [ (geom, val) for geom, val in zip(vector_gdf.geometry, values_to_burn)] 
-    
+    try:
+        geom_value_list = zip(vector_gdf.geometry, values_to_burn)
+    except:
+        geom_value_list = ( (geom, values_to_burn) for geom in vector_gdf.geometry )
     
     t = calc_affine(raster_df)
+    
     result = rasterio.features.rasterize(geom_value_list, 
                                          out_shape=raster_df.shape, 
                                          transform=t, 
                                          fill=fill, 
                                          all_touched=all_touched)
+    
     res_df = pd.DataFrame(result, columns=raster_df.columns, index=raster_df.index)
     return res_df
 
