@@ -3,7 +3,6 @@ USE_GEOPANDAS = True
 import sys,os,datetime
 import pandas as pd
 import numpy as np
-import pysal
 
 if USE_GEOPANDAS:
     import geopandas as gpd
@@ -18,7 +17,6 @@ import matplotlib.pyplot as plt
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 import win32com.client
-
 import affine
 
 
@@ -49,10 +47,15 @@ MIF_SWISS='CoordSys Earth Projection 25, 1003, "m", 7.4395833333, 46.9524055555,
 MIF_WGS='CoordSys Earth Projection 1, 104'
 
 def read_dbf(dbfile):
+    import pysal
     db = pysal.open(dbfile) #Pysal to open DBF
     d = {col: db.by_col(col) for col in db.header} #Convert dbf to dictionary
     pandasDF = pd.DataFrame(d) #Convert to Pandas DF
     return pandasDF
+
+def raster2pic(df, dest):
+    from PIL import Image
+    Image.fromarray(df.as_matrix()).save(dest)
 
 def run_nb(ju_nb):
     """Execute a jupyter notebook"""
