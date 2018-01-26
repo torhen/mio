@@ -190,6 +190,10 @@ def vectorize(df):
 def rasterize(vector_gdf, raster_df, values_to_burn=128, fill=0, all_touched=False):
     """ burn vector features into a raster """
     
+    # no geometry to burn
+    if vector_gdf.unary_union.area==0:
+        return raster_df
+    
     try:
         geom_value_list = zip(vector_gdf.geometry, values_to_burn)
     except:
