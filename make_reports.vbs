@@ -9,51 +9,41 @@ make_reports
 
 sub make_reports
 
-	if wscript.arguments.count = 0 then
-		MsgBox "Please supply commandline argument."
-		exit sub
-	end if
 
 	proj_path = "C:\proj" & "\"
 	
 	' if the ATL was deleted, recover it 
 	Set fso = CreateObject("Scripting.FileSystemObject")
-	If not fso.FileExists(proj_path & "proj.doc") Then
+	If not fso.FileExists(proj_path & "proj.atl") Then
+		'Wscript.echo "Copy proj.doc to proj.atl"
 		fso.CopyFile proj_path & "proj.doc",proj_path & "proj.atl", True
 	End If
 
 	' Start Atoll and load document
 	set app = CreateObject("Atoll.Application")
-	wscript.ConnectObject app, "Atoll_" ' Otherwise the evaents will not be cached!!!
+	wscript.ConnectObject app, "Atoll_" ' Otherwise the events will not be cached!!!
 	app.Visible = True
 	set doc = app.Documents.Open(proj_path & "proj.atl")
 	
 	' to create cfg file:
 	   ' - delete all macros 
-	   ' - switch on all predictions (all visible)
+	   ' - inactivate all add-ins
+	   ' - make all predictions visible
 	   ' - create one report
 	   ' - save config file (all oprions selected) to report.cfg
 	doc.SetConfig ( "C:\proj\data\report.cfg")
 	
-	' start the process dependend on commandline argument
-	Set args = Wscript.Arguments
-	arg = args(0)
-
-	if arg = "set_values" then
-		doc.refresh
-		set dict = CreateObject("Scripting.Dictionary")
-		fill_dict dict, proj_path & "trx_active.csv"
-		set_trx dict, "gtransmitters"
-		set_trx dict, "utransmitters"
-		set_trx dict, "ltransmitters"
-		set_lte_load 20
-		set_gsm_rep 33
-	else
-		pred_folder = arg
-		unlock_pred pred_folder
-		run_pred
-		export_result pred_folder, proj_path & pred_folder
-	end if
+	' Overwrite some columns of Atoll tables
+	overwrite_table  "gtransmitters", "C:\proj\update_gtransmitters.csv"
+	overwrite_table  "utransmitters", "C:\proj\update_utransmitters.csv"
+	overwrite_table  "ltransmitters", "C:\proj\update_ltransmitters.csv"
+	overwrite_table  "grepeaters", "C:\proj\update_grepeaters.csv"
+	overwrite_table  "lcells", "C:\proj\update_lcells.csv"
+	
+	calc_and_export "export_2g", proj_path & "export_2g"
+	calc_and_export "export_3g", proj_path & "export_3g"
+	calc_and_export "export_4g", proj_path & "export_4g"
+	calc_and_export "export_tp", proj_path & "export_tp"
 
 	doc.Save()
 	Wscript.DisconnectObject app
@@ -66,11 +56,16 @@ sub make_reports
 	fso.CopyFile proj_path & "proj.atl", proj_path & "proj.doc", True
 	fso.CopyFile proj_path & "make_reports.vbs", proj_path & "make_reports.doc", True
 
-
-	Wscript.Quit 0
-
 end sub
 
+
+sub calc_and_export(pred_folder, export_folder)
+
+	unlock_pred pred_folder
+	run_pred
+	export_result pred_folder, export_folder
+
+end sub
 
 private sub fill_dict(dict, file_name)
 
@@ -84,48 +79,10 @@ private sub fill_dict(dict, file_name)
 		end if
 	loop
 
-
 end sub
 
 
-private sub set_trx(dict, table_name)
-	app.LogMessage "Script set trx " & table_name
 
-	set tab = doc.GetRecords(table_name, True)
-	i_all = tab.RowCount
-	
-	' get the transmittes names from table
-	a = tab.GetValues(empty,empty) ' get the whole table
-	dim arr_trx()
-	redim arr_trx(i_all)
-	for i = 1 to i_all
-		arr_trx(i) = a(i,2)
-	next
-
-	' set values
-	dim arr()
-	redim arr(i_all,5)
-	
-	arr(0,0) = "active"
-	arr(0,1) = "propag_model"
-	arr(0,2) = "calc_radius"
-	arr(0,3) = "calc_resolution"
-	arr(0,4) = "propag_model2"
-	arr(0,5) = "TABULARDATA_POSITION"
-	
-	for i=1 to i_all
-		trx = arr_trx(i)
-		arr(i,0) = dict.exists(trx)
-		arr(i,1) = "CrossWave_SR"
-		arr(i,2) = 25000
-		arr(i,3) = 100
-		arr(i,4) = ""
-		arr(i,5) = i
-	next
-
-	res = tab.SetValues(arr)
-
-end sub
 
 private sub set_lte_load(load_value)
 	app.LogMessage "Script set lte load " & load_value
@@ -150,29 +107,6 @@ private sub set_lte_load(load_value)
 
 end sub
 
-private sub set_gsm_rep(eirp_value)
-	app.LogMessage "Script set gsm rep " & eirp_value
-
-	set tab = doc.GetRecords("grepeaters", True)
-	i_all = tab.RowCount
-
-	dim arr()
-	redim arr(i_all,1)
-	
-	arr(0,0) = "eirp"
-	arr(0,1) = "TABULARDATA_POSITION"
-	
-	for i=1 to i_all
-		arr(i,0) = eirp_value
-		arr(i,1) = i
-	next
-
-	res = tab.SetValues(arr)
-
-end sub
-
-
-
 private sub unlock_pred(folder_name)
 
 	set pred_folder =  doc.GetRootFolder(0).Item("Predictions").Item(folder_name)
@@ -181,7 +115,6 @@ private sub unlock_pred(folder_name)
 		app.LogMessage "Script unlocking " & pred.name
 		pred.SetProperty "LOCKED", False
 	next 
-
 
 end sub
 
@@ -242,6 +175,88 @@ private sub run_pred
 	loop
 end sub
 
+function csv2dict(csv_file)
+	sep = ";"
+	Set fso = CreateObject("Scripting.FileSystemObject")
+
+	Set inputFile = fso.OpenTextFile(csv_file)
+
+	Set dict = CreateObject("Scripting.Dictionary")
+	
+	i=0
+	Do While inputFile.AtEndOfStream <> True
+		i = i+1
+		sLine = inputFile.ReadLine
+
+		if i=1 then
+			' save the header with a special key
+			sLine = sLine + sep + "TABULARDATA_POSITION"
+			aLine = split(sLine, sep)
+			dict.add "_header_", aLine
+		else
+			' fill the dicionary
+			sLine = sLine + sep + "-1"
+			aLine = split(sLine, sep)
+			dict.add aLine(0), aLine
+		end if
+
+	Loop
+	
+	Set csv2dict = dict
+end function
+	
+sub overwrite_table(atoll_table, csv_file)
+
+	app.LogMessage "overwrite " & atoll_table
+	
+	' Get data from csv
+	Set dict = csv2dict(csv_file)
+	
+	' find name of primary key column
+	sPrime = dict.item("_header_")(0)
+	
+
+	' Header
+	aHeader = dict.item("_header_")
+	iCols = ubound(aHeader)
+	
+	' get primary key data from atoll table
+	set tab = doc.GetRecords(atoll_table, True)
+	dim cols(0)
+	cols(0) = aHeader(0)
+	aPrimeData = tab.GetValues(empty,cols)
+	iRows = tab.RowCount
+
+	' create the input array
+	dim input_arr()
+	redim input_arr(iRows, iCols-1)	
+	
+	' set the header
+	for i=1 to iCols:
+		input_arr(0, i-1) = rtrim(aHeader(i))
+	next
+	
+	' set the data
+	for r = 1 to iRows
+		PrimeKey = aPrimeData(r,1)
+		
+		if not dict.Exists(PrimeKey) then
+			'app.LogMessage "not found " & PrimeKey
+			PrimeKey = "_default_"
+		end if
+		
+		for c=1 to iCols:
+			input_arr(r, c-1) = rtrim(dict.item(PrimeKey)(c))
+		next
+		input_arr(r, iCols-1) = r
+
+
+	next
+		
+	
+	tab.SetValues(input_arr)
+	
+end sub
 
 
 
