@@ -24,26 +24,29 @@ sub make_reports
 	wscript.ConnectObject app, "Atoll_" ' Otherwise the events will not be cached!!!
 	app.Visible = True
 	set doc = app.Documents.Open(proj_path & "proj.atl")
+	doc.refresh 0   'cancel changes and reload database!!!
 	
 	' to create cfg file:
 	   ' - delete all macros 
 	   ' - inactivate all add-ins
 	   ' - make all predictions visible
 	   ' - create one report
+	   ' - lock all predictions!
 	   ' - save config file (all oprions selected) to report.cfg
 	doc.SetConfig ( "C:\proj\data\report.cfg")
-	
+
 	' Overwrite some columns of Atoll tables
-	overwrite_table  "gtransmitters", "C:\proj\update_gtransmitters.csv"
-	overwrite_table  "utransmitters", "C:\proj\update_utransmitters.csv"
 	overwrite_table  "ltransmitters", "C:\proj\update_ltransmitters.csv"
-	overwrite_table  "grepeaters", "C:\proj\update_grepeaters.csv"
 	overwrite_table  "lcells", "C:\proj\update_lcells.csv"
+	overwrite_table  "utransmitters", "C:\proj\update_utransmitters.csv"
+	overwrite_table  "gtransmitters", "C:\proj\update_gtransmitters.csv"
+	overwrite_table  "grepeaters", "C:\proj\update_grepeaters.csv"
 	
-	calc_and_export "export_2g", proj_path & "export_2g"
-	calc_and_export "export_3g", proj_path & "export_3g"
+
 	calc_and_export "export_4g", proj_path & "export_4g"
 	calc_and_export "export_tp", proj_path & "export_tp"
+	calc_and_export "export_3g", proj_path & "export_3g"
+	calc_and_export "export_2g", proj_path & "export_2g"
 
 	doc.Save()
 	Wscript.DisconnectObject app
