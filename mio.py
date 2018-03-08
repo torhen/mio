@@ -130,6 +130,7 @@ def read_raster_binary(source, dtype, width, height, transform):
 def write_raster(df_list, dest_file, color_map=0):
     """ write df raster list to geo tiff together with world file, or Arcview ESRI grid text file
         df  must be 'uint8' to apply color map
+        color_map is dictionary like {0:(255,0,0), 1:(0,255,0)}
     """
     
     driver_dict = {'.tif': 'GTiff', '.txt': 'AAIGrid', '.asc': 'AAIGrid'}
