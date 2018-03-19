@@ -99,7 +99,8 @@ set_options()
 def read_raster(raster_file):
     """ Read a raster file and return a list of dataframes"""
     ds = rasterio.open(raster_file)
-    t = ds.transform
+    t = ds.affine
+    # chenged from t ds.transform
    
     df_list = []
     # band counts is based 1
