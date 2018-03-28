@@ -158,7 +158,6 @@ def write_raster(df_list, dest_file, color_map=0):
         dst.write(a)
         if color_map:
             dst.write_colormap(1, color_map)
-
     
 def calc_affine(df):
     """generate transorm affine object from raster data frame """
@@ -176,14 +175,15 @@ def vectorize(df):
     """ make shapes from raster, genial! """
     t = calc_affine(df)
     a = df.values
-    # zeros an nan are left open space, means mask = True!
-    maske = (df != 0).fillna(True)
+    
     gdf = gpd.GeoDataFrame()
     geoms  = []
     value = []
-    for s,v in rasterio.features.shapes(a,transform=t,mask=maske.values):
-        geoms.append(shape(s))
-        value.append(v)
+    gen = rasterio.features.shapes(a,transform=t)
+    for s,v in gen:
+        if v:
+            geoms.append(shape(s))
+            value.append(v)
     gdf['geometry'] = geoms
     gdf = gdf.set_geometry('geometry')
     gdf['val']=value
@@ -226,55 +226,6 @@ def refresh_excel(excel_file):
             ws.PivotTables(j).PivotCache().Refresh()
     wb.Save()
     xlapp.Quit()
-
-
-# create normed address key for matching
-def adr_key(zi,street,no):
-    zi=str(zi)
-    street=str(street)
-    no=str(no)
-    
-    # norm street
-    if ',' in  street:
-        l= street.split(',')
-        street = ''.join(reversed(l))
-        
-    
-    # add space for simpler filtering
-    street=street.lower().strip()
-    street=' %s ' % street
-    
-    # replace abbr.
-    street=street.replace('str.','strasse')
-    street=street.replace('ch.','chemin')
-    street=street.replace('rte.','route')
-    street=street.replace('bvd.','boulevard')
-    street=street.replace('sent.','sentier')
-    street=street.replace('av.','avenue')
-    street=street.replace('pl.','place')
-    street=street.replace('imp.','impasse')
-    # if point is  forgotten
-    street=street.replace(' str ','strasse')
-    street=street.replace(' ch ','chemin')
-    street=street.replace(' rte ','route')
-    street=street.replace(' bvd ','boulevard')
-    street=street.replace(' sent ','sentier')
-    street=street.replace(' av ','avenue')
-    street=street.replace(' pl ','place')
-    street=street.replace(' imp ','impasse')
-
-
-    street=''.join([c if c. isalnum() else '' for c in street])
-
-    # norm house number
-    no=''.join([c if c. isdigit() else '' for c in no])
-    s=''.join(no)
-    if not s:
-        s='0'
-    no=str(int(s))
-
-    return '%s_%s_%s' % (zi,street,no)
-
 
 def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
         
@@ -347,124 +298,8 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
     gdf.to_file(tab_name,driver='MapInfo File',crs_wkt=crs_wkt,schema=schema)    
     return print(len(gdf), 'rows of type', geo_obj_type, 'written to mapinfo file.')
     
-    
-def read_mif(sMif):
-    sBase=os.path.splitext(sMif)[0]
-    fmif=open(sBase+".mif",encoding='latin-1')
-    
-    # read Delimiter
-    s=""
-    while(not s.lower().startswith('delimiter')):
-        s=next(fmif) 
-        sDelimiter=s.split()[1].strip('"').strip("'")
-
-    # read header
-    s=""
-    while(not s.lower().startswith('columns')):
-        s=next(fmif)
-    iCols=int(s.split()[1])
-    lColNames=[]
-    for i in range(iCols):
-        s=next(fmif).strip()
-        sColName=s.split()[0]
-        lColNames.append(sColName)
-    fmif.close()
-    
-    # create dataframe and read mid file
-    df=pd.read_csv(sBase+".mid",sep=sDelimiter,header=None,encoding='latin-1')
-    df.columns=lColNames
-    
-    # clean uo
-    fmif.close()
-    
-    # give back dtaframe
-    return df
-
-def write_mif(df,sMif,x=0,y=0,sCoordSys='swiss'):
-    """ Write mif, but only points implemented"""
-    df=df.copy()
-    sSep=";"
-    sFileTitle=os.path.splitext(sMif)[0]
-    
-    dCoordSys={}
-    dCoordSys['swiss']='CoordSys Earth Projection 25, 1003, "m", 7.4395833333, 46.9524055555, 600000, 200000'
-    dCoordSys['wgs84']='CoordSys Earth Projection 1, 104'
-    if sCoordSys in dCoordSys: sCoordSys=dCoordSys[sCoordSys]
-        
-    lColumns=[]
-    dColNames={}
-    for sFieldName in df:
-        if not sFieldName.startswith("mi_"): # skip the mai_fields
-            series=df[sFieldName]
-            sType = str(series.dtype)
-          
-            # Make fieldnames fit to mapinfo
-            sClean=""
-            for c in sFieldName:
-                if (ord(c) in range(ord('A'),ord('z')) or (ord(c) in range(ord('0'),ord('9')))):
-                    sClean=sClean+c
-                else:
-                    sClean=sClean+"_"
-            sFieldName=sClean[0:30]
-                    
-            i=0
-            while(sFieldName in dColNames):
-                s=str(i) 
-                sFieldName=sFieldName[0:len(s)]+s
-                i=i+1
-            dColNames[sFieldName]=1
-            if "int" in sType:
-                lColumns.append("%s Integer" % sFieldName)
-            elif "float" in sType:
-                lColumns.append("%s Float" % sFieldName)
-            else:
-                iLen=int(series.astype(str).map(len).max())
-                lColumns.append("%s Char(%d)" % (sFieldName,iLen))
-     
-    # write mif file header
-    fmif=open(sFileTitle+".mif","w")
-    fmif.write('Version 300\n')
-    fmif.write('Charset "Neutral"\n')
-    fmif.write('Delimiter "%s"\n' % sSep)
-    fmif.write('%s\n' % sCoordSys)
-    fmif.write('Columns %d\n' % len(lColumns))
-    for sCol in lColumns:
-        fmif.write("\t%s\n" % sCol)
-    fmif.write('Data\n\n')
-        
-    # write objects into mif
-
-    for index,row in df.iterrows():
-        if type(x)==str:
-            fx=float(row[x])
-            fy=float(row[y])
-        else:
-            fx=x
-            fy=y
-        s="Point %f %f\n" % (fx,fy)
-        fmif.write(s)
-    fmif.close()
-
-    # write mid file
-    df.to_csv(sFileTitle+".mid",sep=sSep,header=None,index=None)
-    return 'mif file written.'
-
-def search_files(search_path):
-    """Search all files and return a datafram"""
-    dic={'dir':[],'file':[]}
-    for root,dirs,files in os.walk(search_path):
-        dic['dir'].append(root)
-        dic['file'].append('.')
-        for file in files:
-            dic['file'].append(file)
-            dic['dir'].append(root)
-    return pd.DataFrame(dic)
-
-def delete_if_exists(file_name):
-    if os.path.isfile(file_name):
-        os.remove(file_name)
-        
-def swiss_wgs(sX,sY):
+      
+def swiss2wgs(sX,sY):
     sX=str(sX)
     sY=str(sY)
 
@@ -479,7 +314,7 @@ def swiss_wgs(sX,sY):
     else:
         return (-1,-1)
     
-def wgs_swiss(sLon,sLat):
+def wgs2swiss(sLon,sLat):
     sLon=str(sLon)
     sLat=str(sLat)
 
