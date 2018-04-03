@@ -46,6 +46,10 @@ WKT_WGS="""GEOGCS["unnamed",
 MIF_SWISS='CoordSys Earth Projection 25, 1003, "m", 7.4395833333, 46.9524055555, 600000, 200000'
 MIF_WGS='CoordSys Earth Projection 1, 104'
 
+def delete_if_exists(file_name):
+    if os.path.isfile(file_name):
+        os.remove(file_name)
+
 def read_dbf(dbfile):
     import pysal
     db = pysal.open(dbfile) #Pysal to open DBF
@@ -159,27 +163,28 @@ def write_raster(df_list, dest_file, color_map=0):
         if color_map:
             dst.write_colormap(1, color_map)
     
-def calc_affine(df):
-    """generate transorm affine object from raster data frame """
-
-    x0 = df.columns[0]
-    y0 = df.index[0]
-    dx = df.columns[1] - df.columns[0]
-    dy = df.index[1] - df.index[0]
-    
-    t = affine.Affine(dx, 0, x0 , 0, dy ,y0 - dy) 
-    # y0 - dy because anker point is in the south!
-    return t
 
 def vectorize(df):
     """ make shapes from raster, genial! """
-    t = calc_affine(df)
-    a = df.values
+    df = df.copy()
     
+    xs, ys = df.shape
+    if xs>2000 or ys>2000:
+        print('Warning! rasterio vectorizing seems to work till 2000 x 2000 pixel, current size=', df.shape)
+    
+    ' Calc Affine'
+    d = df.columns[1] - df.columns[0]
+    t = affine.Affine( 0, d, df.columns[0],
+                      -d, 0, df.index[0]  )
+
+    a = df.values
     gdf = gpd.GeoDataFrame()
+    
+    mask = (df != 0).fillna(True).values
+
     geoms  = []
     value = []
-    gen = rasterio.features.shapes(a,transform=t)
+    gen = rasterio.features.shapes(a, transform=t, mask=mask)
     for s,v in gen:
         if v:
             geoms.append(shape(s))
