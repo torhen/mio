@@ -3,17 +3,17 @@ dim doc
 dim app
 dim fso
 
-close_atoll_after_calculation = False
+proj_path = "C:\proj" & "\"
 
-' start
-make_reports
+open_atoll_project
+refresh_and_overwrite
+'run_predictions
+'export_results
+'save_document
+'close_application
 
+sub open_atoll_project
 
-sub make_reports
-
-
-	proj_path = "C:\proj" & "\"
-	
 	' if the ATL was deleted, recover it 
 	Set fso = CreateObject("Scripting.FileSystemObject")
 	If not fso.FileExists(proj_path & "proj.atl") Then
@@ -26,6 +26,10 @@ sub make_reports
 	wscript.ConnectObject app, "Atoll_" ' Otherwise the events will not be cached!!!
 	app.Visible = True
 	set doc = app.Documents.Open(proj_path & "proj.atl")
+	
+end sub
+
+sub refresh_and_overwrite
 	doc.refresh 0   'cancel changes and reload database!!!
 	
 	' Overwrite some columns of Atoll tables
@@ -35,25 +39,31 @@ sub make_reports
 	overwrite_table  "gtransmitters", "C:\proj\trx\update_gtransmitters.csv"
 	overwrite_table  "grepeaters",    "C:\proj\trx\update_grepeaters.csv"
 	
-	' calc and ecport
+	app.LogMessage "Overwrite completed."
+end sub
+
+sub run_predictions
 	unlock_pred "export"
 	run_pred
+end sub
+
+sub export_results
 	export_result "export", proj_path & "export"
+end sub
 
-	' save document
+sub save_document
 	doc.Save()
+end sub
 	
-	' Closing
-	if close_atoll_after_calculation then
-		Wscript.DisconnectObject app
-		doc = Null
-		app.Documents.CloseAll 0
-		app.Quit 0 
-		app = Null
+sub close_application
+	Wscript.DisconnectObject app
+	doc = Null
+	app.Documents.CloseAll 0
+	app.Quit 0 
+	app = Null
 
-		' backup the ATL, because they are deleted regulary by a script
-		fso.CopyFile proj_path & "proj.atl", proj_path & "proj.doc", True
-	end if
+	' backup the ATL, because they are deleted regulary by a script
+	fso.CopyFile proj_path & "proj.atl", proj_path & "proj.doc", True
 
 end sub
 
