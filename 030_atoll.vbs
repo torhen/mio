@@ -7,18 +7,17 @@ proj_path = "C:\proj" & "\"
 
 open_atoll_project
 refresh_and_overwrite
-'run_predictions
-'export_results
-'save_document
-'close_application
+run_predictions "export_tp"
+export_results "export_tp"
+save_document
+close_application
 
 sub open_atoll_project
-
 	' if the ATL was deleted, recover it 
 	Set fso = CreateObject("Scripting.FileSystemObject")
 	If not fso.FileExists(proj_path & "proj.atl") Then
 		'Wscript.echo "Copy proj.doc to proj.atl"
-		fso.CopyFile proj_path & "proj.doc",proj_path & "proj.atl", True
+		fso.CopyFile proj_path & "proj.doc", proj_path & "proj.atl", True
 	End If
 
 	' Start Atoll and load document
@@ -42,13 +41,13 @@ sub refresh_and_overwrite
 	app.LogMessage "Overwrite completed."
 end sub
 
-sub run_predictions
-	unlock_pred "export"
+sub run_predictions(pred_folder)
+	unlock_pred pred_folder
 	run_pred
 end sub
 
-sub export_results
-	export_result "export", proj_path & "export"
+sub export_results(pred_folder)
+	export_result pred_folder, proj_path & "export"
 end sub
 
 sub save_document
@@ -108,6 +107,16 @@ end sub
 
 private sub unlock_pred(folder_name)
 
+	'first lock all predictions
+	set root_folder =  doc.GetRootFolder(0).Item("Predictions")
+	for each pred_folder in root_folder
+		for each pred in pred_folder
+			pred.SetProperty "LOCKED", True
+		next
+	next
+	
+
+	'now unlock predictions
 	set pred_folder =  doc.GetRootFolder(0).Item("Predictions").Item(folder_name)
 	
 	for each pred in pred_folder
@@ -147,6 +156,9 @@ sub export_result(pred_folder, dest_folder)
 		file_name = pred_name
 		file_name = replace(file_name, " ", "_")
 		file_name = replace(file_name, ":", "_")
+		
+		' make visible
+		pred.Visible = True
 		
 		pred.export dest_folder & "\" & file_name & ".txt"  , oCS, "TXT"
 		
