@@ -6,9 +6,13 @@ dim fso
 proj_path = "C:\proj" & "\"
 
 open_atoll_project
+set_zones "C:\proj\script\zones_switzerland.geo"
+'set_zones "C:\proj\script\zones_oerlikon.geo"
 refresh_and_overwrite
 run_predictions "export_tp"
 export_results "export_tp"
+'run_predictions "export_cov"
+'export_results "export_cov"
 save_document
 close_application
 
@@ -26,6 +30,10 @@ sub open_atoll_project
 	app.Visible = True
 	set doc = app.Documents.Open(proj_path & "proj.atl")
 	
+end sub
+
+sub set_zones(zones_file):
+	doc.SetConfig zones_file
 end sub
 
 sub refresh_and_overwrite
