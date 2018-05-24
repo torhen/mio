@@ -3,6 +3,7 @@ USE_GEOPANDAS = True
 import sys,os,datetime
 import pandas as pd
 import numpy as np
+import subprocess
 
 if USE_GEOPANDAS:
 	import geopandas as gpd
@@ -281,8 +282,9 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
 		sys.exit("ERROR: extension of '%s' should be .tab or .mif." % tab_name)
 	
 	for ext in ext_list:
-		#print("removing %s" % base_dest+ext)
-		delete_if_exists(base_dest+ext)
+		file = base_dest + ext
+		if os.path.isfile(file):
+			os.remove(file)
 
 	gdf.to_file(tab_name,driver='MapInfo File',crs_wkt=crs_wkt,schema=schema)    
 	return print(len(gdf), 'rows of type', geo_obj_type, 'written to mapinfo file.')
@@ -419,18 +421,23 @@ def wgs_swiss(sLon,sLat):
 		return (x,y)
 	else:
 		return (-1,-1)
-	
+
+def run(str_or_list):
+    subprocess.run(str_or_list, check=True, shell=True)	
 	
 def run_mb(mb_script):
-	wd = os.getcwd()
-	
-	path_mb = os.path.join(wd, 'mb.mb')
-	path_mbx = os.path.join(wd, 'mb.mbx')
-	
-	delete_if_exists(path_mb)
-	delete_if_exists(path_mbx)
-	
-	with open(path_mb,'w') as fout: 
-		fout.write(mb_script)
-	os.system('mapbasic.exe -D %s' % path_mb)
-	os.system('mapinfow.exe %s' % path_mbx)
+    wd = os.getcwd()
+
+    path_mb = os.path.join(wd, 'mb.mb')
+    path_mbx = os.path.join(wd, 'mb.mbx')
+    
+    if os.path.isfile(path_mb): os.remove(path_mb)
+    if os.path.isfile(path_mbx): os.remove(path_mbx)
+
+    print(path_mb)
+    
+    with open(path_mb,'w') as fout: 
+        fout.write(mb_script)
+        
+    subprocess.run(['mapbasic.exe', '-D', path_mb], check=True, shell=True)
+    subprocess.run(['mapinfow.exe', path_mbx, path_mb], check=True, shell=True)
