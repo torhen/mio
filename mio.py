@@ -179,8 +179,18 @@ def vectorize(df):
 	return gdf
 
 def rasterize(vector_gdf, raster_df, values_to_burn=128, fill=0, all_touched=False):
-	""" burn vector features into a raster """
-	
+	""" burn vector features into a raster, input ruster or resolution"""
+
+	# raster_df is integer, create raster with resolution raster_df 
+	if isinstance(raster_df, int):
+		res = raster_df
+		x0, y0, x1, y1 = vector_gdf.geometry.total_bounds
+		x0 = int(x0 // res * res - res)
+		x1 = int(x1 // res * res + res)
+		y0 = int(y0 // res * res - res)
+		y1 = int(y1 // res * res + res)
+		raster_df = pd.DataFrame(columns=range(x0, x1, res), index=range(y1, y0, -res))
+
 	# no geometry to burn
 	if vector_gdf.unary_union.area==0:
 		return raster_df
