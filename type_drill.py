@@ -15,6 +15,8 @@ def read_text(file, letters_per_line):
 		text = text.replace('„', '"')
 		text = text.replace('“', '"')
 		text = text.replace('–', '-')
+		text = text.replace('ß', 'ss')
+
 		# keep the excisting linebreaks
 		text = text.split('\n')
 
@@ -26,9 +28,11 @@ def read_text(file, letters_per_line):
 		new_text = [line + "¬" for line in new_text]
 		return new_text
 
-def draw_text(canvas, text, font, font_size):
-	for line, line_text in enumerate(text):
-		canvas.create_text(5, 5 + 1.5 * font_size * line, text=line_text, anchor='nw', fill='black', font=font)
+def draw_text():
+	g_canvas.create_rectangle((0,0,g_width, g_height), fill='white', outline='white')
+	for line, line_text in enumerate(g_text):
+		t = g_canvas.create_text(5, 5 + 1.5 * g_font_size * line, text = line_text, anchor='nw', fill='black', font=g_font)
+
 
 def clear_cursor():
 	y = 5 + 1.5 * g_font_size * g_cur_line
@@ -40,6 +44,11 @@ def draw_cursor():
 	y = 5 + 1.5 * g_font_size * g_cur_line
 
 	# just calulate the coordinates of the cursor
+
+	if g_cur_line < 0 or g_cur_line > g_visible_lines:
+		# cusor not visible
+		return
+
 	t = g_canvas.create_text(5, y, text=g_text[g_cur_line][0:g_cur_char], anchor='nw', fill='white',  font=g_font)
 	x0, y0, w0, h0 = g_canvas.bbox(t)
 	t = g_canvas.create_text(5, y, text=g_text[g_cur_line][0:g_cur_char+1], anchor='nw', fill='white',  font=g_font)
@@ -65,6 +74,10 @@ def move_cursor():
 		g_cur_line = 0
 		g_cur_char = 0
 
+
+	if g_cur_line >= g_scroll_after_lines:
+		scroll(1)
+
 	draw_cursor()
 
 def keydown(event):
@@ -75,8 +88,8 @@ def keydown(event):
 	try:
 		c_ist = ord(event.char)
 		if c_ist == 10 or c_ist == 13: c_ist = 172
+
 	except:
-		# ignore shift and other keys
 		return
 
 	
@@ -87,6 +100,27 @@ def keydown(event):
 		messagebox.showinfo('Error', error_text)
 		print(error_text)
 
+def scroll(n):
+	print('scroll',n)
+	global g_first_visible_line, g_text, g_cur_line
+
+	g_first_visible_line += n
+	if g_first_visible_line <0:
+		g_first_visible_line = 0
+		return
+	
+	g_text = g_full_text[g_first_visible_line:g_first_visible_line + g_visible_lines + 1]
+	draw_text()
+	g_cur_line = g_cur_line - n
+	draw_cursor()
+
+def downKey(event):
+    print("Down key pressed")
+    scroll(1)
+
+def upKey(event):
+    print("Up key pressed")
+    scroll(-1)
 
 # global settings
 g_font_size = 12
@@ -98,22 +132,29 @@ g_letters_per_line = 60
 g_cur_line = 0
 g_cur_char = 0
 g_canvas = 0
+g_full_text = 0
 g_text = 0
+g_first_visible_line = 0
+g_visible_lines = 30
+g_scroll_after_lines = 10
 
 def main():
-	global g_canvas, g_text
+	global g_canvas, g_full_text, g_text
 	master = Tk()
 	master.geometry(f'{g_width}x{g_height}')
 	g_canvas = init_app(master)
 
-	g_text = read_text('text.txt', g_letters_per_line)
-	draw_text(g_canvas, g_text, g_font, g_font_size)
+	g_full_text = read_text('text.txt', g_letters_per_line)
+	g_text = g_full_text[g_first_visible_line:g_first_visible_line + g_visible_lines + 1]
+
+	draw_text()
 
 	draw_cursor()
 
 
 	master.bind("<KeyPress>", keydown)
-
+	master.bind('<Up>', upKey)
+	master.bind('<Down>', downKey)
 	mainloop()
 
 
