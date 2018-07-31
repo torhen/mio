@@ -16,6 +16,8 @@ def read_text(file, letters_per_line):
 		text = text.replace('“', '"')
 		text = text.replace('–', '-')
 		text = text.replace('ß', 'ss')
+		text = text.replace('‚', "'")
+		text = text.replace('‘', "'")
 
 		text = text.replace('Ü', 'Ue')
 		text = text.replace('Ö', 'Oe')
@@ -85,15 +87,19 @@ def move_cursor():
 
 	draw_cursor()
 
-def keydown(event):
 
+def keydown(event):
+	global g_typed_all, g_typed_wrong
 	c_soll = ord(g_text[g_cur_line][g_cur_char])
+
 
 
 	try:
 		c_ist = ord(event.char)
 		if c_ist == 10 or c_ist == 13: c_ist = 172
-
+		g_typed_all += 1
+		perc = round(100*g_typed_wrong/g_typed_all,1)
+		print(f"\rError rate: {perc}% ", end='')
 	except:
 		return
 
@@ -101,9 +107,13 @@ def keydown(event):
 	if c_ist == c_soll or c_ist==27:
 		move_cursor()
 	else:
+		g_typed_wrong += 1
+
 		error_text = f"Expected '{chr(c_soll)}' ({c_soll}) but received '{chr(c_ist)}' ({c_ist})"
 		messagebox.showinfo('Error', error_text)
 		print(error_text)
+		
+
 
 def scroll(n):
 	print('scroll',n)
@@ -143,6 +153,8 @@ g_text = 0
 g_first_visible_line = 0
 g_visible_lines = 30
 g_scroll_after_lines = 10
+g_typed_all = 0
+g_typed_wrong = 0
 
 def main():
 	global g_canvas, g_full_text, g_text
