@@ -99,10 +99,11 @@ def keydown(event):
 		if c_ist == 10 or c_ist == 13: c_ist = 172
 		g_typed_all += 1
 		perc = round(100*g_typed_wrong/g_typed_all,1)
-		print(f"\rError rate: {perc}% ", end='')
+		title = f"{g_file_name}: {g_typed_wrong}/{g_typed_all} ({perc}%) "
+
+		g_master.title(title)
 	except:
 		return
-
 	
 	if c_ist == c_soll or c_ist==27:
 		move_cursor()
@@ -155,14 +156,19 @@ g_visible_lines = 30
 g_scroll_after_lines = 10
 g_typed_all = 0
 g_typed_wrong = 0
+g_master = 0
+g_file_name = ''
 
 def main():
-	global g_canvas, g_full_text, g_text
-	master = Tk()
-	master.geometry(f'{g_width}x{g_height}')
-	g_canvas = init_app(master)
+	global g_canvas, g_full_text, g_text, g_master, g_file_name
+	g_master = Tk()
+	g_master.geometry(f'{g_width}x{g_height}')
+	g_canvas = init_app(g_master)
 
-	g_full_text = read_text('text.txt', g_letters_per_line)
+	g_file_name = 'text.txt'
+	g_full_text = read_text(g_file_name, g_letters_per_line)
+
+	g_master.title(g_file_name)
 	g_text = g_full_text[g_first_visible_line:g_first_visible_line + g_visible_lines + 1]
 
 	draw_text()
@@ -170,9 +176,9 @@ def main():
 	draw_cursor()
 
 
-	master.bind("<KeyPress>", keydown)
-	master.bind('<Up>', upKey)
-	master.bind('<Down>', downKey)
+	g_master.bind("<KeyPress>", keydown)
+	g_master.bind('<Up>', upKey)
+	g_master.bind('<Down>', downKey)
 	mainloop()
 
 
