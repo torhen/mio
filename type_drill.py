@@ -19,6 +19,13 @@ def read_text(file, letters_per_line):
 		text = text.replace('‚', "'")
 		text = text.replace('‘', "'")
 
+		text = text.replace('»', '"')
+		text = text.replace('«', '"')
+
+		text = text.replace('›', "'")
+		text = text.replace('‹', "'")
+
+
 		text = text.replace('Ü', 'Ue')
 		text = text.replace('Ö', 'Oe')
 		text = text.replace('Ä', 'Ae')
@@ -80,7 +87,6 @@ def move_cursor():
 	if g_cur_line >= len(g_text):
 		g_cur_line = 0
 		g_cur_char = 0
-
 
 	if g_cur_line >= g_scroll_after_lines:
 		scroll(1)
