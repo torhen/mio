@@ -17,6 +17,10 @@ def read_text(file, letters_per_line):
 		text = text.replace('–', '-')
 		text = text.replace('ß', 'ss')
 
+		text = text.replace('Ü', 'Ue')
+		text = text.replace('Ö', 'Oe')
+		text = text.replace('Ä', 'Ae')
+
 		# keep the excisting linebreaks
 		text = text.split('\n')
 
@@ -29,6 +33,7 @@ def read_text(file, letters_per_line):
 		return new_text
 
 def draw_text():
+	g_canvas.delete("all")
 	g_canvas.create_rectangle((0,0,g_width, g_height), fill='white', outline='white')
 	for line, line_text in enumerate(g_text):
 		t = g_canvas.create_text(5, 5 + 1.5 * g_font_size * line, text = line_text, anchor='nw', fill='black', font=g_font)
@@ -108,8 +113,9 @@ def scroll(n):
 	if g_first_visible_line <0:
 		g_first_visible_line = 0
 		return
-	
+
 	g_text = g_full_text[g_first_visible_line:g_first_visible_line + g_visible_lines + 1]
+	g_text = g_text.copy()
 	draw_text()
 	g_cur_line = g_cur_line - n
 	draw_cursor()
