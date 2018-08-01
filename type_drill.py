@@ -75,7 +75,7 @@ def draw_cursor():
 	coord1 = (x1,  y1,  w1 , h1)
 	coord = (w0,   y0, w1, h0)
 
-	g_canvas.create_rectangle(coord, fill='light green', outline='black')
+	g_canvas.create_rectangle(coord, fill='light green', outline='green')
 	t = g_canvas.create_text(5, y, text=g_text[g_cur_line], anchor='nw', fill='black',  font=g_font)
 
 def move_cursor():
@@ -149,11 +149,11 @@ def upKey(event):
     scroll(-1)
 
 # global settings
-g_font_size = 12
-g_width = 650
+g_width = 700
 g_height = 400
-g_font_size = 12
-g_font = "Courier"
+g_font_size = 14
+g_font_name = "Courier"
+g_font = 0
 g_letters_per_line = 60
 g_cur_line = 0
 g_cur_char = 0
@@ -169,10 +169,12 @@ g_master = 0
 g_file_name = ''
 
 def main():
-	global g_canvas, g_full_text, g_text, g_master, g_file_name
+	global g_canvas, g_full_text, g_text, g_master, g_file_name, g_font
 	g_master = Tk()
 	g_master.geometry(f'{g_width}x{g_height}')
 	g_canvas = init_app(g_master)
+
+	g_font = g_font_name + " " + str(g_font_size)
 
 	g_file_name = 'text.txt'
 	g_full_text = read_text(g_file_name, g_letters_per_line)
