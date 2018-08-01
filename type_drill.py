@@ -5,7 +5,7 @@ import textwrap
 
 
 def init_app(master):
-	canvas = Canvas(master, width=320, height=100)
+	canvas = Canvas(master)
 	canvas.pack(expand=True, fill='both')
 	return canvas
 
@@ -14,6 +14,7 @@ def read_text(file, letters_per_line):
 		text = fin.read()
 		text = text.replace('„', '"')
 		text = text.replace('“', '"')
+		text = text.replace('”', '"')
 		text = text.replace('–', '-')
 		text = text.replace('ß', 'ss')
 		text = text.replace('‚', "'")
@@ -24,6 +25,8 @@ def read_text(file, letters_per_line):
 
 		text = text.replace('›', "'")
 		text = text.replace('‹', "'")
+
+		text = text.replace('…', "...")
 
 
 		text = text.replace('Ü', 'Ue')
@@ -148,7 +151,7 @@ def upKey(event):
 # global settings
 g_font_size = 12
 g_width = 650
-g_height = 500
+g_height = 400
 g_font_size = 12
 g_font = "Courier"
 g_letters_per_line = 60
