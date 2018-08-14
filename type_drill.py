@@ -41,7 +41,7 @@ def read_text(file, letters_per_line):
 			splitted = textwrap.wrap(line, width= letters_per_line)
 			new_text = new_text + splitted
 
-		new_text = [line + "¬" for line in new_text]
+		new_text = [g_special_chars + line + "¬" for line in new_text]
 		return new_text
 
 def draw_text():
@@ -151,7 +151,7 @@ def upKey(event):
 # global settings
 g_width = 700
 g_height = 400
-g_font_size = 14
+g_font_size = 18
 g_font_name = "Courier"
 g_font = 0
 g_letters_per_line = 60
@@ -167,6 +167,7 @@ g_typed_all = 0
 g_typed_wrong = 0
 g_master = 0
 g_file_name = ''
+g_special_chars = r"{*&}"
 
 def main():
 	global g_canvas, g_full_text, g_text, g_master, g_file_name, g_font
