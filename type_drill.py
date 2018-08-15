@@ -11,12 +11,17 @@ def init_app(master):
 	return canvas
 
 def special_chars():
-	special_chars_rnd = ''
-	for k in range(g_special_chars_count):
+	""" every char only once and in scrambled order"""
+	s = ""
+	while True:
 		i = random.randint(0, len(g_special_chars)-1)
-		special_chars_rnd += g_special_chars[i]
+		s = s + g_special_chars[i]
+		s = ''.join(set(s))
+		if len(s) >= g_special_chars_count:
+			l = list(s)
+			random.shuffle(l)
+			return ''.join(l) + " "
 
-	return special_chars_rnd + " "
 
 def read_text(file, letters_per_line):
 	with open(file, encoding=g_text_encoding) as fin:
