@@ -2,6 +2,7 @@
 from tkinter import *
 from tkinter import messagebox
 import textwrap
+import random
 
 
 def init_app(master):
@@ -9,8 +10,16 @@ def init_app(master):
 	canvas.pack(expand=True, fill='both')
 	return canvas
 
+def special_chars():
+	special_chars_rnd = ''
+	for k in range(g_special_chars_count):
+		i = random.randint(0, len(g_special_chars)-1)
+		special_chars_rnd += g_special_chars[i]
+
+	return special_chars_rnd + " "
+
 def read_text(file, letters_per_line):
-	with open(file) as fin:
+	with open(file, encoding=g_text_encoding) as fin:
 		text = fin.read()
 		text = text.replace('„', '"')
 		text = text.replace('“', '"')
@@ -19,16 +28,11 @@ def read_text(file, letters_per_line):
 		text = text.replace('ß', 'ss')
 		text = text.replace('‚', "'")
 		text = text.replace('‘', "'")
-
 		text = text.replace('»', '"')
 		text = text.replace('«', '"')
-
 		text = text.replace('›', "'")
 		text = text.replace('‹', "'")
-
 		text = text.replace('…', "...")
-
-
 		text = text.replace('Ü', 'Ue')
 		text = text.replace('Ö', 'Oe')
 		text = text.replace('Ä', 'Ae')
@@ -41,7 +45,7 @@ def read_text(file, letters_per_line):
 			splitted = textwrap.wrap(line, width= letters_per_line)
 			new_text = new_text + splitted
 
-		new_text = [g_special_chars + line + "¬" for line in new_text]
+		new_text = [ special_chars() + line + "¬" for line in new_text]
 		return new_text
 
 def draw_text():
@@ -167,7 +171,9 @@ g_typed_all = 0
 g_typed_wrong = 0
 g_master = 0
 g_file_name = ''
-g_special_chars = r"{*&}"
+g_special_chars = r"{}*#%&/"
+g_special_chars_count = 3
+g_text_encoding = 'latin-1'
 
 def main():
 	global g_canvas, g_full_text, g_text, g_master, g_file_name, g_font
