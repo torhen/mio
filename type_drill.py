@@ -87,21 +87,29 @@ def draw_cursor():
 	g_canvas.create_rectangle(coord, fill='light green', outline='green')
 	t = g_canvas.create_text(5, y, text=g_text[g_cur_line], anchor='nw', fill='black',  font=g_font)
 
-def move_cursor():
+def move_cursor(n):
 	global g_cur_char, g_cur_line
 
 	clear_cursor()
 
-	g_cur_char += 1
+	g_cur_char += n
+
 	if g_cur_char >= len(g_text[g_cur_line]):
-		g_cur_line += 1
+		g_cur_line += n
 		g_cur_char = 0
+
+	if g_cur_char < 0:
+		g_cur_char = 0
+
+	if g_cur_line < 0:
+		g_cur_line = 0
+
 	if g_cur_line >= len(g_text):
 		g_cur_line = 0
 		g_cur_char = 0
 
 	if g_cur_line >= g_scroll_after_lines:
-		scroll(1)
+		scroll(n)
 
 	draw_cursor()
 
@@ -124,7 +132,7 @@ def keydown(event):
 		return
 	
 	if c_ist == c_soll or c_ist==27:
-		move_cursor()
+		move_cursor(1)
 	else:
 		g_typed_wrong += 1
 
@@ -135,7 +143,6 @@ def keydown(event):
 
 
 def scroll(n):
-	print('scroll',n)
 	global g_first_visible_line, g_text, g_cur_line
 
 	g_first_visible_line += n
@@ -150,12 +157,21 @@ def scroll(n):
 	draw_cursor()
 
 def downKey(event):
-    print("Down key pressed")
-    scroll(1)
+	global g_cur_line
+	g_cur_line = g_cur_line + 1
+	scroll(1)
 
 def upKey(event):
-    print("Up key pressed")
-    scroll(-1)
+	global g_cur_line
+	g_cur_line = g_cur_line -1
+	scroll(-1)
+
+def rightKey(event):
+	move_cursor(1)
+
+def leftKey(event):
+	move_cursor(-1)
+
 
 # global settings
 g_width = 700
@@ -170,7 +186,7 @@ g_canvas = 0
 g_full_text = 0
 g_text = 0
 g_first_visible_line = 0
-g_visible_lines = 30
+g_visible_lines = 100
 g_scroll_after_lines = 10
 g_typed_all = 0
 g_typed_wrong = 0
@@ -178,7 +194,7 @@ g_master = 0
 g_file_name = ''
 g_special_chars = r"{}*#%&/"
 g_special_chars_count = 3
-g_text_encoding = 'latin-1'
+g_text_encoding = 'utf-8'
 
 def main():
 	global g_canvas, g_full_text, g_text, g_master, g_file_name, g_font
@@ -202,6 +218,8 @@ def main():
 	g_master.bind("<KeyPress>", keydown)
 	g_master.bind('<Up>', upKey)
 	g_master.bind('<Down>', downKey)
+	g_master.bind('<Right>', rightKey)
+	g_master.bind('<Left>', leftKey)
 	mainloop()
 
 
