@@ -203,7 +203,7 @@ g_typed_all = 0
 g_typed_wrong = 0
 g_master = 0
 g_file_name = ''
-g_special_chars = r"{}*#%&/[]+@_$|\<>"
+g_special_chars = r"{}*#%&/[]+@_$|\<>=^~"
 g_special_chars_count = 3
 g_text_encoding = 'utf-8'
 
