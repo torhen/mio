@@ -42,6 +42,12 @@ def read_text(file, letters_per_line):
 		text = text.replace('Ö', 'Oe')
 		text = text.replace('Ä', 'Ae')
 
+		text2 = ''
+		for c in text:
+			if ord(c)!=173:  # line break 'minus'
+				text2 += c
+		text = text2
+
 		# keep the excisting linebreaks
 		text = text.split('\n')
 
@@ -50,8 +56,13 @@ def read_text(file, letters_per_line):
 			splitted = textwrap.wrap(line, width= letters_per_line)
 			new_text = new_text + splitted
 
-		new_text = [ special_chars() + line + "¬" for line in new_text]
-		return new_text
+		text3 = []
+		for i, line in enumerate(new_text):
+			s = str(i) + ' ' + special_chars() + line + "¬"
+			text3.append(s)
+
+		#new_text = [ str(i) + ' ' + special_chars() + line + "¬" for line in new_text]
+		return text3
 
 def draw_text():
 	g_canvas.delete("all")
@@ -192,7 +203,7 @@ g_typed_all = 0
 g_typed_wrong = 0
 g_master = 0
 g_file_name = ''
-g_special_chars = r"{}*#%&/"
+g_special_chars = r"{}*#%&/[]+@_$|"
 g_special_chars_count = 3
 g_text_encoding = 'utf-8'
 
