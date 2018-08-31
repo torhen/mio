@@ -1,4 +1,4 @@
-
+import os
 from tkinter import *
 from tkinter import messagebox
 import textwrap
@@ -154,7 +154,7 @@ def keydown(event):
 
 
 def scroll(n):
-	global g_first_visible_line, g_text, g_cur_line
+	global g_first_visible_line, g_text, g_cur_line, g_last_position
 
 	g_first_visible_line += n
 	if g_first_visible_line <0:
@@ -166,11 +166,16 @@ def scroll(n):
 	draw_text()
 	g_cur_line = g_cur_line - n
 	draw_cursor()
+	g_last_position = g_last_position +n 
 
 def downKey(event):
-	global g_cur_line
-	g_cur_line = g_cur_line + 1
-	scroll(1)
+	scroll_line(1)
+
+def scroll_line(n):
+	global g_cur_line, g_last_position
+	g_cur_line = g_cur_line + n
+	scroll(n)
+
 
 def upKey(event):
 	global g_cur_line
@@ -182,6 +187,7 @@ def rightKey(event):
 
 def leftKey(event):
 	move_cursor(-1)
+
 
 
 # global settings
@@ -206,9 +212,26 @@ g_file_name = ''
 g_special_chars = r"{}*#%&/[]+@_$|\<>=^~"
 g_special_chars_count = 3
 g_text_encoding = 'utf-8'
+g_last_position = 0
+
+def end_app():
+	print('write last position',g_last_position)
+	with open('last_position.txt', 'w') as fout:
+		fout.write(str(g_last_position))
+	g_master.quit()
+
 
 def main():
 	global g_canvas, g_full_text, g_text, g_master, g_file_name, g_font
+
+	if os.path.isfile('last_position.txt'):
+		with open('last_position.txt') as fin:
+			s = fin.read()
+			g_last_position = int(s)
+	else:
+		g_last_position = 0
+
+
 	g_master = Tk()
 	g_master.geometry(f'{g_width}x{g_height}')
 	g_canvas = init_app(g_master)
@@ -225,12 +248,16 @@ def main():
 
 	draw_cursor()
 
+	scroll_line(g_last_position)
+
 
 	g_master.bind("<KeyPress>", keydown)
 	g_master.bind('<Up>', upKey)
 	g_master.bind('<Down>', downKey)
 	g_master.bind('<Right>', rightKey)
 	g_master.bind('<Left>', leftKey)
+
+	g_master.protocol("WM_DELETE_WINDOW", end_app)
 	mainloop()
 
 
