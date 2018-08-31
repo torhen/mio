@@ -30,6 +30,7 @@ def read_text(file, letters_per_line):
 		text = text.replace('“', '"')
 		text = text.replace('”', '"')
 		text = text.replace('–', '-')
+		text = text.replace('—','-')
 		text = text.replace('ß', 'ss')
 		text = text.replace('‚', "'")
 		text = text.replace('‘', "'")
@@ -61,7 +62,6 @@ def read_text(file, letters_per_line):
 			s = str(i) + ' ' + special_chars() + line + "¬"
 			text3.append(s)
 
-		#new_text = [ str(i) + ' ' + special_chars() + line + "¬" for line in new_text]
 		return text3
 
 def draw_text():
@@ -190,7 +190,7 @@ g_height = 400
 g_font_size = 18
 g_font_name = "Courier"
 g_font = 0
-g_letters_per_line = 60
+g_letters_per_line = 80
 g_cur_line = 0
 g_cur_char = 0
 g_canvas = 0
