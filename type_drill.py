@@ -39,9 +39,9 @@ def read_text(file, letters_per_line):
 		text = text.replace('›', "'")
 		text = text.replace('‹', "'")
 		text = text.replace('…', "...")
-		text = text.replace('Ü', 'Ue')
-		text = text.replace('Ö', 'Oe')
-		text = text.replace('Ä', 'Ae')
+		#text = text.replace('Ü', 'Ue')
+		#text = text.replace('Ö', 'Oe')
+		#text = text.replace('Ä', 'Ae')
 
 		text2 = ''
 		for c in text:
