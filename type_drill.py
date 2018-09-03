@@ -20,7 +20,7 @@ def special_chars():
 		if len(s) >= g_special_chars_count:
 			l = list(s)
 			random.shuffle(l)
-			return ''.join(l) + " "
+			return ''.join(l) + chr(g_placeholder_tab)
 
 
 def read_text(file, letters_per_line):
@@ -59,7 +59,9 @@ def read_text(file, letters_per_line):
 
 		text3 = []
 		for i, line in enumerate(new_text):
-			s = str(i) + ' ' + special_chars() + line + "¬"
+			#s = str(i) + '⋅'  + special_chars() + line + "¬"
+			s = str(i) + chr(g_placeholder_tab)  + special_chars() + line + "¬"
+
 			text3.append(s)
 
 		return text3
@@ -133,7 +135,13 @@ def keydown(event):
 
 	try:
 		c_ist = ord(event.char)
+		print('bla', c_ist)
 		if c_ist == 10 or c_ist == 13: c_ist = 172
+
+		# tabulator key
+		if c_ist == 9:
+			c_ist = 8901
+
 		g_typed_all += 1
 		perc = round(100*g_typed_wrong/g_typed_all,1)
 		title = f"{g_file_name}: {g_typed_wrong}/{g_typed_all} ({perc}%) "
@@ -148,6 +156,7 @@ def keydown(event):
 		g_typed_wrong += 1
 
 		error_text = f"Expected '{chr(c_soll)}' ({c_soll}) but received '{chr(c_ist)}' ({c_ist})"
+
 		messagebox.showinfo('Error', error_text)
 		print(error_text)
 		
@@ -213,6 +222,7 @@ g_special_chars = r"{}*#%&/[]+@_$|\<>=^~"
 g_special_chars_count = 3
 g_text_encoding = 'utf-8'
 g_last_position = 0
+g_placeholder_tab = 8901
 
 def end_app():
 	print('write last position',g_last_position)
@@ -227,7 +237,7 @@ def main():
 	if os.path.isfile('last_position.txt'):
 		with open('last_position.txt') as fin:
 			s = fin.read()
-			g_last_position = int(s)
+			g_last_position = int(s) 
 	else:
 		g_last_position = 0
 
