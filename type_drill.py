@@ -4,7 +4,6 @@ from tkinter import messagebox
 import textwrap
 import random
 
-
 def init_app(master):
 	canvas = Canvas(master)
 	canvas.pack(expand=True, fill='both')
@@ -135,7 +134,6 @@ def keydown(event):
 
 	try:
 		c_ist = ord(event.char)
-		print('bla', c_ist)
 		if c_ist == 10 or c_ist == 13: c_ist = 172
 
 		# tabulator key
