@@ -96,7 +96,14 @@ def draw_cursor():
 	coord1 = (x1,  y1,  w1 , h1)
 	coord = (w0,   y0, w1, h0)
 
-	g_canvas.create_rectangle(coord, fill='light green', outline='green')
+	if g_system_state == 0:
+		cursor_color_fill = 'light green'
+		cursor_color_outline = 'green'
+	else:
+		cursor_color_fill = '#FAAFBA'
+		cursor_color_outline = 'red'
+
+	g_canvas.create_rectangle(coord, fill=cursor_color_fill, outline=cursor_color_outline)
 	t = g_canvas.create_text(5, y, text=g_text[g_cur_line], anchor='nw', fill='black',  font=g_font)
 
 def move_cursor(n):
@@ -127,7 +134,7 @@ def move_cursor(n):
 
 
 def keydown(event):
-	global g_typed_all, g_typed_wrong
+	global g_typed_all, g_typed_wrong, g_system_state
 	c_soll = ord(g_text[g_cur_line][g_cur_char])
 
 
@@ -141,22 +148,39 @@ def keydown(event):
 			c_ist = 8901
 
 		g_typed_all += 1
-		perc = round(100*g_typed_wrong/g_typed_all,1)
-		title = f"{g_file_name}: {g_typed_wrong}/{g_typed_all} ({perc}%) "
+		perc = round(100*g_typed_wrong/g_typed_all,3)
 
-		g_master.title(title)
 	except:
 		return
+
+	if g_system_state == 0:
+		# normal state
 	
-	if c_ist == c_soll or c_ist==27:
-		move_cursor(1)
+		if c_ist == c_soll or c_ist==27:
+			g_system_state = 0
+			move_cursor(1)
+			title = f"{g_file_name}: {g_typed_wrong}/{g_typed_all} ({perc}%) "
+			g_master.title(title)
+		else:
+			g_typed_wrong += 1
+			g_system_state = 1
+
+			move_cursor(0)
+
+			error_text = f"Expected '{chr(c_soll)}' ({c_soll}) but received '{chr(c_ist)}' ({c_ist})"
+			g_master.title(error_text)
+			#messagebox.showinfo('Error', error_text)
+
+
+			print(error_text)
 	else:
-		g_typed_wrong += 1
-
-		error_text = f"Expected '{chr(c_soll)}' ({c_soll}) but received '{chr(c_ist)}' ({c_ist})"
-
-		messagebox.showinfo('Error', error_text)
-		print(error_text)
+		# system is in error state
+		if c_ist == 8: # Back delete key
+			g_system_state = 0
+			move_cursor(0)
+		else:
+			error_text = f"Expected '{chr(c_soll)}' ({c_soll}) but received '{chr(c_ist)}' ({c_ist})"
+			g_master.title('error_text')
 		
 
 
@@ -221,6 +245,7 @@ g_special_chars_count = 3
 g_text_encoding = 'utf-8'
 g_last_position = 0
 g_placeholder_tab = 8901
+g_system_state = 0
 
 def end_app():
 	print('write last position',g_last_position)
