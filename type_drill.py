@@ -159,7 +159,7 @@ def keydown(event):
 		if c_ist == c_soll or c_ist==27:
 			g_system_state = 0
 			move_cursor(1)
-			title = f"{g_file_name}: {g_typed_wrong}/{g_typed_all} ({perc}%) "
+			title = f"{g_file_name}: {g_typed_wrong}/{g_typed_all} ({perc:.2f}%) "
 			g_master.title(title)
 		else:
 			g_typed_wrong += 1
@@ -180,7 +180,7 @@ def keydown(event):
 			move_cursor(0)
 		else:
 			error_text = f"Expected '{chr(c_soll)}' ({c_soll}) but received '{chr(c_ist)}' ({c_ist})"
-			g_master.title('error_text')
+			g_master.title(error_text)
 		
 
 
