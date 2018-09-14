@@ -137,10 +137,15 @@ def keydown(event):
 	global g_typed_all, g_typed_wrong, g_system_state
 	c_soll = ord(g_text[g_cur_line][g_cur_char])
 
-
+	if event.char == '§':
+		print('PANIC!')
+		g_master.wm_state('iconic')
+		return
 
 	try:
 		c_ist = ord(event.char)
+
+
 		if c_ist == 10 or c_ist == 13: c_ist = 172
 
 		# tabulator key
@@ -169,8 +174,6 @@ def keydown(event):
 
 			error_text = f"Expected '{chr(c_soll)}' ({c_soll}) but received '{chr(c_ist)}' ({c_ist})"
 			g_master.title(error_text)
-			#messagebox.showinfo('Error', error_text)
-
 
 			print(error_text)
 	else:
