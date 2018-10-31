@@ -451,3 +451,17 @@ def run_mb(mb_script):
         
     subprocess.run(['mapbasic.exe', '-D', path_mb], check=True, shell=True)
     subprocess.run(['mapinfow.exe', path_mbx, path_mb], check=True, shell=True)
+
+def combine_small(big, small, func=np.maximum):
+    """Combine a big with a small dataframe using func, big will be changed"""
+    y0 = small.index[0]
+    y1 = small.index[-1]
+    ys = (y1-y0) / (len(small.index)-1)
+
+    x0 = small.columns[0]
+    x1 = small.columns[-1]
+    xs = (x1-x0) / (len(small.index)-1)
+
+
+    part = func(big.loc[y0:y1, x0:x1], small)
+    big.loc[y0:y1, x0:x1] = part
