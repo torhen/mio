@@ -454,6 +454,7 @@ def run_mb(mb_script):
 
 def combine_small(big, small, func=np.maximum):
     """Combine a big with a small dataframe using func, big will be changed"""
+    #small = small.copy()
     y0 = small.index[0]
     y1 = small.index[-1]
     ys = (y1-y0) / (len(small.index)-1)
@@ -461,7 +462,12 @@ def combine_small(big, small, func=np.maximum):
     x0 = small.columns[0]
     x1 = small.columns[-1]
     xs = (x1-x0) / (len(small.index)-1)
-
-
-    part = func(big.loc[y0:y1, x0:x1], small)
-    big.loc[y0:y1, x0:x1] = part
+    
+    part = big.loc[y0:y1, x0:x1]
+    
+    if part.shape != small.shape:
+        # small overlapping big
+        small = small.copy().reindex(index=part.index, columns=part.columns)
+    part_res = func(part, small)
+    
+    big.loc[y0:y1, x0:x1] = part_res
