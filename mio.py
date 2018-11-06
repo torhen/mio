@@ -369,46 +369,43 @@ def combine_small(big, small, func=np.maximum):
     big.loc[y0:y1, x0:x1] = part_res
 
 
+def disagg(vec):
+    """Dissagregate collections and multi geomtries"""
+
+    # Split GeometryCollections
+    no_coll = []
+    for i, row in vec.iterrows():
+        geom = row.geometry
+        if geom.type == 'GeometryCollection':
+            for part in geom:
+                row2 = row.copy()
+                row2.geometry = part
+                no_coll.append(row2)
+
+        else:
+                no_coll.append(row)           
+
+    # Split Multi geomries
+    res = []
+    for row in no_coll:
+        geom = row.geometry
+        if geom.type.startswith('Multi'):
+            for part in geom:
+                row2 = row.copy()
+                row2.geometry = part
+                res.append(row2)
+        else:
+                res.append(row)
+
+    return gpd.GeoDataFrame(res, crs=vec.crs).reset_index(drop=True)
+
 def write_geojson(vec, dest):
     """Write only polygons, including attributes"""
 
     # WGS 84
     vec = vec.to_crs({'init': 'epsg:4326'})
 
-    # Split GeometryCollections
-    no_coll = gpd.GeoDataFrame()
-    for i, row in vec.iterrows():
-        row2 = row.copy()
-        geom = row2.geometry
-        if not geom.type == 'GeometryCollection':
-           no_coll = no_coll.append(row2)
-
-        else:
-            for part in geom:
-                row2.geometry = part
-                no_coll = no_coll.append(row2)
-
-    res = gpd.GeoDataFrame()         
-
-    for i, row in no_coll.iterrows():
-        geom = row.geometry
-        if geom.type == 'Polygon':
-            row2 = row.copy()
-            row2['index'] = i
-            res = res.append(row2)
-        elif geom.type == 'MultiPolygon':
-            for poly in geom:
-                row2 = row.copy()
-                row2.geometry = poly
-                row2['index'] =i
-                res = res.append(row2)
-        else:
-            print(f'Warning: {geom.type} not written.')
-
-    res['index'] = res['index'].astype(int)        
-    res = res.set_index('index') 
-    res.head()
-
     if os.path.isfile(dest):
         os.remove(dest)
-    res.to_file(dest, driver='GeoJSON', encoding='utf-8')
+        
+    vec.to_file(dest, driver='GeoJSON', encoding='utf-8')
