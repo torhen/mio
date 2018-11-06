@@ -53,11 +53,11 @@ MIF_WGS='CoordSys Earth Projection 1, 104'
 
 def read_dbf(dbfile):
 	"""read dbase file"""
-	from simpledbf import Dbf5
-	dbf = Dbf5(dbfile)
-	pl = dbf.to_dataframe()
-	pl.columns = [a.split('\x00')[0] for a in pl.columns] # remove strange characters in columns
-	return pl
+	import pysal
+	db = pysal.open(dbfile) #Pysal to open DBF
+	d = {col: db.by_col(col) for col in db.header} #Convert dbf to dictionary
+	pandasDF = pd.DataFrame(d) #Convert to Pandas DF
+	return pandasDF
 
 
 def run_nb(ju_nb):
@@ -371,9 +371,26 @@ def combine_small(big, small, func=np.maximum):
 
 def write_geojson(vec, dest):
     """Write only polygons, including attributes"""
-    res = gpd.GeoDataFrame()
 
+    # WGS 84
+    vec = vec.to_crs({'init': 'epsg:4326'})
+
+    # Split GeometryCollections
+    no_coll = gpd.GeoDataFrame()
     for i, row in vec.iterrows():
+        row2 = row.copy()
+        geom = row2.geometry
+        if not geom.type == 'GeometryCollection':
+           no_coll = no_coll.append(row2)
+
+        else:
+            for part in geom:
+                row2.geometry = part
+                no_coll = no_coll.append(row2)
+
+    res = gpd.GeoDataFrame()         
+
+    for i, row in no_coll.iterrows():
         geom = row.geometry
         if geom.type == 'Polygon':
             row2 = row.copy()
@@ -385,6 +402,8 @@ def write_geojson(vec, dest):
                 row2.geometry = poly
                 row2['index'] =i
                 res = res.append(row2)
+        else:
+            print(f'Warning: {geom.type} not written.')
 
     res['index'] = res['index'].astype(int)        
     res = res.set_index('index') 
@@ -392,5 +411,4 @@ def write_geojson(vec, dest):
 
     if os.path.isfile(dest):
         os.remove(dest)
-
     res.to_file(dest, driver='GeoJSON', encoding='utf-8')
