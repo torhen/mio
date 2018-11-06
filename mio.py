@@ -52,6 +52,7 @@ MIF_SWISS='CoordSys Earth Projection 25, 1003, "m", 7.4395833333, 46.9524055555,
 MIF_WGS='CoordSys Earth Projection 1, 104'
 
 def read_dbf(dbfile):
+	"""read dbase file"""
 	import pysal
 	db = pysal.open(dbfile) #Pysal to open DBF
 	d = {col: db.by_col(col) for col in db.header} #Convert dbf to dictionary
@@ -75,6 +76,7 @@ def run_nb(ju_nb):
 	nbformat.write(nb, open(new_nb_name, mode='wt'))
 	
 def main():
+	"""to stat notebook from commandline"""
 	if len(sys.argv)>1:
 		nb = sys.argv[1]
 		print('starting',nb)
@@ -107,15 +109,6 @@ def read_raster(raster_file):
 	ds.close()
 	return df_list
 
-def read_raster_binary(source, dtype, width, height, transform):
-	### read raster from binary file , e.g. .bil ###
-	raw = np.fromfile(source, dtype=dtype)
-	a = raw.reshape(height,width)
-	df = pd.DataFrame(a)
-	t = affine.Affine(*transform)
-	df.columns = [(t*(x,0))[0] for x in df.columns]
-	df.index   = [(t*(0,y))[1] for y in df.index]
-	return df
 
 def write_raster(df_list, dest_file, color_map=0):
 	""" write df raster list to geo tiff together with world file, or Arcview ESRI grid text file
@@ -148,7 +141,6 @@ def write_raster(df_list, dest_file, color_map=0):
 		if color_map:
 			dst.write_colormap(1, color_map)
 
-	
 def calc_affine(df):
 	"""generate transorm affine object from raster data frame """
 
@@ -212,6 +204,7 @@ def rasterize(vector_gdf, raster_df, values_to_burn=128, fill=0, all_touched=Fal
 	return res_df
 
 def refresh_excel(excel_file):
+	"""refreshe excel data and pivot tables"""
 	excel_file=os.path.abspath(excel_file)
 	xlapp = win32com.client.DispatchEx("Excel.Application")
 	wb = xlapp.workbooks.open(excel_file)
@@ -228,6 +221,7 @@ def refresh_excel(excel_file):
 
 
 def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
+	"""Write Mapinfo format, all geometry types in one file"""
 		
 	gdf=gdf.copy()
 	
@@ -300,109 +294,8 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
 	return print(len(gdf), 'rows of type', geo_obj_type, 'written to mapinfo file.')
 	
 	
-def read_mif(sMif):
-	sBase=os.path.splitext(sMif)[0]
-	fmif=open(sBase+".mif",encoding='latin-1')
-	
-	# read Delimiter
-	s=""
-	while(not s.lower().startswith('delimiter')):
-		s=next(fmif) 
-		sDelimiter=s.split()[1].strip('"').strip("'")
-
-	# read header
-	s=""
-	while(not s.lower().startswith('columns')):
-		s=next(fmif)
-	iCols=int(s.split()[1])
-	lColNames=[]
-	for i in range(iCols):
-		s=next(fmif).strip()
-		sColName=s.split()[0]
-		lColNames.append(sColName)
-	fmif.close()
-	
-	# create dataframe and read mid file
-	df=pd.read_csv(sBase+".mid",sep=sDelimiter,header=None,encoding='latin-1')
-	df.columns=lColNames
-	
-	# clean uo
-	fmif.close()
-	
-	# give back dtaframe
-	return df
-
-def write_mif(df,sMif,x=0,y=0,sCoordSys='swiss'):
-	""" Write mif, but only points implemented"""
-	df=df.copy()
-	sSep=";"
-	sFileTitle=os.path.splitext(sMif)[0]
-	
-	dCoordSys={}
-	dCoordSys['swiss']='CoordSys Earth Projection 25, 1003, "m", 7.4395833333, 46.9524055555, 600000, 200000'
-	dCoordSys['wgs84']='CoordSys Earth Projection 1, 104'
-	if sCoordSys in dCoordSys: sCoordSys=dCoordSys[sCoordSys]
-		
-	lColumns=[]
-	dColNames={}
-	for sFieldName in df:
-		if not sFieldName.startswith("mi_"): # skip the mai_fields
-			series=df[sFieldName]
-			sType = str(series.dtype)
-		  
-			# Make fieldnames fit to mapinfo
-			sClean=""
-			for c in sFieldName:
-				if (ord(c) in range(ord('A'),ord('z')) or (ord(c) in range(ord('0'),ord('9')))):
-					sClean=sClean+c
-				else:
-					sClean=sClean+"_"
-			sFieldName=sClean[0:30]
-					
-			i=0
-			while(sFieldName in dColNames):
-				s=str(i) 
-				sFieldName=sFieldName[0:len(s)]+s
-				i=i+1
-			dColNames[sFieldName]=1
-			if "int" in sType:
-				lColumns.append("%s Integer" % sFieldName)
-			elif "float" in sType:
-				lColumns.append("%s Float" % sFieldName)
-			else:
-				iLen=int(series.astype(str).map(len).max())
-				lColumns.append("%s Char(%d)" % (sFieldName,iLen))
-	 
-	# write mif file header
-	fmif=open(sFileTitle+".mif","w")
-	fmif.write('Version 300\n')
-	fmif.write('Charset "Neutral"\n')
-	fmif.write('Delimiter "%s"\n' % sSep)
-	fmif.write('%s\n' % sCoordSys)
-	fmif.write('Columns %d\n' % len(lColumns))
-	for sCol in lColumns:
-		fmif.write("\t%s\n" % sCol)
-	fmif.write('Data\n\n')
-		
-	# write objects into mif
-
-	for index,row in df.iterrows():
-		if type(x)==str:
-			fx=float(row[x])
-			fy=float(row[y])
-		else:
-			fx=x
-			fy=y
-		s="Point %f %f\n" % (fx,fy)
-		fmif.write(s)
-	fmif.close()
-
-	# write mid file
-	df.to_csv(sFileTitle+".mid",sep=sSep,header=None,index=None)
-	return 'mif file written.'
-
-
 def swiss_wgs(sX,sY):
+	"""Aprroximation CH1903 -> WGS84 https://de.wikipedia.org/wiki/Schweizer_Landeskoordinaten"""
 	sX=str(sX)
 	sY=str(sY)
 
@@ -418,6 +311,7 @@ def swiss_wgs(sX,sY):
 		return (-1,-1)
 	
 def wgs_swiss(sLon,sLat):
+	"""Aprroximation WGS84 -> CH1903 https://de.wikipedia.org/wiki/Schweizer_Landeskoordinaten"""
 	sLon=str(sLon)
 	sLat=str(sLat)
 
@@ -433,24 +327,26 @@ def wgs_swiss(sLon,sLat):
 		return (-1,-1)
 
 def run(str_or_list):
-    subprocess.run(str_or_list, check=True, shell=True)	
+	"""Better replacement for os.system()"""
+	subprocess.run(str_or_list, check=True, shell=True)	
 	
 def run_mb(mb_script):
-    wd = os.getcwd()
+	"""Run Mapbasic string as mapbasic script"""
+	wd = os.getcwd()
 
-    path_mb = os.path.join(wd, 'mb.mb')
-    path_mbx = os.path.join(wd, 'mb.mbx')
+	path_mb = os.path.join(wd, 'mb.mb')
+	path_mbx = os.path.join(wd, 'mb.mbx')
     
-    if os.path.isfile(path_mb): os.remove(path_mb)
-    if os.path.isfile(path_mbx): os.remove(path_mbx)
+	if os.path.isfile(path_mb): os.remove(path_mb)
+	if os.path.isfile(path_mbx): os.remove(path_mbx)
 
-    print(path_mb)
+	print(path_mb)
     
-    with open(path_mb,'w') as fout: 
-        fout.write(mb_script)
+	with open(path_mb,'w') as fout: 
+		fout.write(mb_script)
         
-    subprocess.run(['mapbasic.exe', '-D', path_mb], check=True, shell=True)
-    subprocess.run(['mapinfow.exe', path_mbx, path_mb], check=True, shell=True)
+	subprocess.run(['mapbasic.exe', '-D', path_mb], check=True, shell=True)
+	subprocess.run(['mapinfow.exe', path_mbx, path_mb], check=True, shell=True)
 
 def combine_small(big, small, func=np.maximum):
     """Combine a big with a small dataframe using func, big will be changed"""
@@ -471,3 +367,30 @@ def combine_small(big, small, func=np.maximum):
     part_res = func(part, small)
     
     big.loc[y0:y1, x0:x1] = part_res
+
+
+def write_geojson(vec, dest):
+    """Write only polygons, including attributes"""
+    res = gpd.GeoDataFrame()
+
+    for i, row in vec.iterrows():
+        geom = row.geometry
+        if geom.type == 'Polygon':
+            row2 = row.copy()
+            row2['index'] = i
+            res = res.append(row2)
+        elif geom.type == 'MultiPolygon':
+            for poly in geom:
+                row2 = row.copy()
+                row2.geometry = poly
+                row2['index'] =i
+                res = res.append(row2)
+
+    res['index'] = res['index'].astype(int)        
+    res = res.set_index('index') 
+    res.head()
+
+    if os.path.isfile(dest):
+        os.remove(dest)
+
+    res.to_file(dest, driver='GeoJSON', encoding='utf-8')
