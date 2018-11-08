@@ -116,7 +116,7 @@ def write_raster(df_list, dest_file, color_map=0):
 		color_map is dictionary like {0:(255,0,0), 1:(0,255,0)}
 	"""
 	
-	driver_dict = {'.tif': 'GTiff', '.txt': 'AAIGrid', '.asc': 'AAIGrid'}
+	driver_dict = {'.tif': 'GTiff', '.txt': 'AAIGrid', '.asc': 'AAIGrid', '.bil': 'EHdr'}
 	driver_string = driver_dict[os.path.splitext(dest_file)[1].lower()]
 	
 	# in case arguent is data frame, not list
