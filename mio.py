@@ -53,11 +53,12 @@ MIF_WGS='CoordSys Earth Projection 1, 104'
 
 def read_dbf(dbfile):
 	"""read dbase file"""
-	import pysal
-	db = pysal.open(dbfile) #Pysal to open DBF
-	d = {col: db.by_col(col) for col in db.header} #Convert dbf to dictionary
-	pandasDF = pd.DataFrame(d) #Convert to Pandas DF
-	return pandasDF
+	from simpledbf import Dbf5
+	dbf = Dbf5(dbfile)
+	pl = dbf.to_dataframe()
+	pl.columns = [a.split('\x00')[0] for a in pl.columns] # remove strange characters in columns
+	return pl
+
 
 
 def run_nb(ju_nb):
