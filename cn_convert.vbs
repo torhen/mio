@@ -265,6 +265,7 @@ function make_ir(job, source_dir, template_file, dest_dir, pattern)
 	end if
 		
 	search_pattern = job + pattern
+
 	set src_files = glob(source_dir + "\", search_pattern)
 
 	' find latest file
@@ -337,4 +338,6 @@ function main(source_dir, dest_dir, jobs_txt, pattern)
 end function
 
 
-main "\\swi.srse.net\dfs\Info\TE\Hua_Eng\RE\4.5G and TK Site solution\Detail Design", "dest", "jobs.txt", ".+v3.+\.xlsx"
+
+main "\\swi.srse.net\dfs\Info\TE\Hua_Eng\RE\4.5G and TK Site solution\Detail Design", "dest_upgr", "jobs_upgr.txt", ".+v3.+\.xlsx"
+main "\\weshare.swi.srse.net\ifr\inf01\0011\6_Partners\HUAWEI\Ryan_project\10_Site_Solution", "dest_ryan", "jobs_ryan.txt", ".+\.xlsx"
