@@ -283,7 +283,8 @@ function make_ir(job, source_dir, template_file, dest_dir, pattern)
 	'Process src_file
 	if len(src_file) > 5 then
 		dest_file = dest_dir + "\" + "IR_" + basename(src_file)
-		log "try to create " & dest_file
+		log "source: " & src_file
+		log "dest: " & dest_file
 		create_excel src_file, template_file, dest_file
 	end if	
 
@@ -305,11 +306,11 @@ function get_timestamp()
 
 end function
 
-function create_logfile()
+function create_logfile(suffix)
 	dim s, logWrite, log
 
 	s = get_timestamp()
-	s = get_wd() & "log\" & s & ".txt" 
+	s = get_wd() & "log\" & s & "_" & suffix & ".txt" 
 
     Set logWrite = CreateObject("Scripting.FileSystemObject")
     wscript.StdOut.WriteLine "Create Logfile: " & s
@@ -323,7 +324,7 @@ dim g_logfile_obj
 function main(source_dir, dest_dir, jobs_txt, pattern)
 	dim i, iall, job, jobs
 
-	create_logfile()
+	create_logfile(dest_dir)
 
 	jobs = read_text_file(get_wd + jobs_txt)
 	i=0
