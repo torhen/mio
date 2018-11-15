@@ -1,17 +1,13 @@
 option explicit
 
+' Check if Atoll is already runnung
+if check_process("Atoll.exe") then
+	MsgBox "Atoll is already running. Close and start again."
+	wscript.quit
+end if
+
 dim g_is_running
-dim doc
-dim app
-dim fso
-dim MAKE_FIRST_PART
-
-'cmd_para = wscript.Arguments.Item(0)
-
-' Get commands
-dim cmd_para
-cmd_para = get_commands("C:\proj\script\030_atoll.txt")
-cmd_para = split(cmd_para)
+dim doc, app, fso
 
 
 dim proj_path
@@ -27,78 +23,62 @@ set_zones "C:\proj\script\zones_switzerland.geo"
 ' Refesh from Database
 doc.refresh 0   'cancel changes and reload database!!!
 
+' Overwrite
 overwrite_table  "ltransmitters", "C:\proj\trx\update_ltransmitters.csv"
+overwrite_table  "lcells", "C:\proj\trx\update_lcells.csv"
 overwrite_table  "utransmitters", "C:\proj\trx\update_utransmitters.csv"
 overwrite_table  "gtransmitters", "C:\proj\trx\update_gtransmitters.csv"
 overwrite_table  "grepeaters",    "C:\proj\trx\update_grepeaters.csv"
 
-dim para, is_done
 
-for each para in cmd_para
-	is_done = 0
-	
-	if startswith(para, "zones_") then
-		set_zones "C:\proj\script\" & para & ".geo"
-		is_done = 1
-	end if
-	
-	if para = "with_mocn" then
-		overwrite_table  "gtransmitters", "C:\proj\trx\act_2g_with_mocn.csv"
-		overwrite_table  "utransmitters", "C:\proj\trx\act_3g_with_mocn.csv"
-		overwrite_table  "ltransmitters", "C:\proj\trx\act_4g_with_mocn.csv"
-		is_done = 1
-	end if
-	
-	if para = "no_mocn" then
-		overwrite_table  "gtransmitters", "C:\proj\trx\act_2g_no_mocn.csv"
-		overwrite_table  "utransmitters", "C:\proj\trx\act_3g_no_mocn.csv"
-		overwrite_table  "ltransmitters", "C:\proj\trx\act_4g_no_mocn.csv"
-		is_done = 1
-	end if
-	
-	if startswith(para, "export_") then
-		run_predictions para 
-		export_results  para 	
-		is_done = 1
-	end if
-	
-	if para = "save" then
-		save_document
-		is_done = 1
-	end if
-	
-	if para = "close" then
-		close_application
-		is_done = 1
-	end if
-	
+'Activate Transmitter without MOCN
+overwrite_table  "gtransmitters", "C:\proj\trx\act_2g_no_mocn.csv"
+overwrite_table  "utransmitters", "C:\proj\trx\act_3g_no_mocn.csv"
+overwrite_table  "ltransmitters", "C:\proj\trx\act_4g_no_mocn.csv"
 
-	if is_done = 0 then
-		MsgBox "Did not understand " & para
-	end if
-next
+' Run and export predictions
+run_predictions "export_stat"
+export_results  "export_stat" 
 
 
-	'run_predictions "export_stat"
-	'export_results  "export_stat"
+'Activate Transmitter including MOCN
+overwrite_table  "gtransmitters", "C:\proj\trx\act_2g_with_mocn.csv"
+overwrite_table  "utransmitters", "C:\proj\trx\act_3g_with_mocn.csv"
+overwrite_table  "ltransmitters", "C:\proj\trx\act_4g_with_mocn.csv"
 
-	'run_predictions "export_bs"
-	'export_results  "export_bs"
-	
-	' CALC THROUGHPUT, takes about 12 hours!
-	'msgbox("Switch off Shadowing for TP calculation")
-	
-	'set_zones "C:\proj\script\zones_border_E.geo"
-	'run_predictions "export_tp_E"
-	'export_results  "export_tp_E"
+run_predictions "export_cov"
+export_results  "export_cov"
 
-	'set_zones "C:\proj\script\zones_border_W.geo"
-	'run_predictions "export_tp_W"
-	'export_results  "export_tp_W"
+run_predictions "export_bs"
+export_results  "export_bs"
+
+' Calc throughput in two parts, takes about 12 hours!
+set_zones "C:\proj\script\zones_border_E.geo"
+run_predictions "export_tp_E"
+export_results  "export_tp_E"
+
+set_zones "C:\proj\script\zones_border_W.geo"
+run_predictions "export_tp_W"
+export_results  "export_tp_W"
 
 
-'save_document
+save_document
 'close_application
+
+function check_process(process_name)
+	dim sComputerName, objWMIService, sQuery, objItem, objItems
+	sComputerName = "."
+	Set objWMIService = GetObject("winmgmts:\\" & sComputerName & "\root\cimv2")
+	sQuery = "SELECT * FROM Win32_Process"
+	Set objItems = objWMIService.ExecQuery(sQuery)
+	check_process = 0
+	For Each objItem In objItems
+		if objItem.Name = process_name then
+
+			check_process = 1
+		end if
+	next
+end function
 
 
 function get_commands(script_path)
