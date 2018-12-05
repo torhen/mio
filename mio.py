@@ -410,3 +410,50 @@ def write_geojson(vec, dest):
         os.remove(dest)
         
     vec.to_file(dest, driver='GeoJSON', encoding='utf-8')
+
+
+def write_kml(vec, dest, kml_name ='objects', mode = 'clampToGround', color = 'ffffffff', extrude = 1, heights=0, names=''):
+    import fiona, xmltodict
+    
+    # kml driver must be enabled
+    fiona.drvsupport.supported_drivers['KML'] = 'rw'
+    
+    # wite plain temporary kml file using fiona
+    vec.to_file('tmp.kml', driver='KML')
+    
+    # read file again
+    with open('tmp.kml') as fin:
+        sin = fin.read()
+    
+    # parse kml as xml to style it
+    obj = xmltodict.parse(sin)
+    
+    # style the placemarks
+    obj['kml']['Document']['Folder']['name'] = kml_name
+    for n, pm in enumerate(obj['kml']['Document']['Folder']['Placemark']):
+        if type(names) == type('string'):
+            name = names
+        else:
+            try:
+                name = names[n]
+            except:
+                name = str(names)
+
+        if type(heights)== type(1) or type(heights)==type(1.23):
+            height = heights
+        else:
+            height = heights[n]
+
+        pm['name'] = str(name)
+        pm['Style']['LineStyle']['color'] = color
+        pm['Polygon']['extrude'] = extrude
+        pm['Polygon']['altitudeMode'] = mode
+        cl = pm['Polygon']['outerBoundaryIs']['LinearRing']['coordinates'].split()
+        n = [xy + ',' + str(height) for xy in cl]
+        s = ' '.join(n)
+        pm['Polygon']['outerBoundaryIs']['LinearRing']['coordinates'] = s
+        
+    # write the styled xml
+    sout = xmltodict.unparse(obj, pretty=True)
+    with open(dest, 'w') as fout:
+        fout.write(sout)
