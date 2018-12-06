@@ -12,6 +12,7 @@ if USE_GEOPANDAS:
 	import rasterio.features
 	import rasterio.mask
 	import fiona
+	import shapely
 	if rasterio.__version__[0]=='0':
 		print('WARNING! This old rasterio (%s) version has a bug in vectorizing!' % rasterio.__version__)
 		print('try: conda install -c conda-forge/label/dev rasterio')
@@ -412,48 +413,45 @@ def write_geojson(vec, dest):
     vec.to_file(dest, driver='GeoJSON', encoding='utf-8')
 
 
-def write_kml(vec, dest, kml_name ='objects', mode = 'clampToGround', color = 'ffffffff', extrude = 1, heights=0, names=''):
-    import fiona, xmltodict
+def write_kml(gdf, dest, height_col='', altitude_mode='clampToGround', extrude_mode=0, placemark_name='', placemark_descr='', doc_name=''):
+    """For now only polygons are supported"""
+    from fastkml import kml
     
-    # kml driver must be enabled
-    fiona.drvsupport.supported_drivers['KML'] = 'rw'
+    # WGS 84
+    gdf = gdf.to_crs({'init': 'epsg:4326'})
     
-    # wite plain temporary kml file using fiona
-    vec.to_file('tmp.kml', driver='KML')
+    # add heights 2.5 d
+    if height_col != '':
+        l = []
+        for ind, row in gdf.iterrows():
+            height = row[height_col]
+            geom3d = shapely.ops.transform(lambda x,y: (x,y,height) , row.geometry)
+            l.append(geom3d)
+        gdf.geometry = l
     
-    # read file again
-    with open('tmp.kml') as fin:
-        sin = fin.read()
-    
-    # parse kml as xml to style it
-    obj = xmltodict.parse(sin)
-    
-    # style the placemarks
-    obj['kml']['Document']['Folder']['name'] = kml_name
-    for n, pm in enumerate(obj['kml']['Document']['Folder']['Placemark']):
-        if type(names) == type('string'):
-            name = names
-        else:
-            try:
-                name = names[n]
-            except:
-                name = str(names)
+    # make kml
+    k = kml.KML()
+    ns = '{http://www.opengis.net/kml/2.2}'
+    d = kml.Document(ns, 'docid', doc_name)
+    k.append(d)
 
-        if type(heights)== type(1) or type(heights)==type(1.23):
-            height = heights
+    for ind, row in gdf.iterrows():
+        if placemark_name in gdf.columns:
+            pm_name = str(row[placemark_name])
+        elif placemark_name =='':
+        	pm_name = str(ind)
         else:
-            height = heights[n]
-
-        pm['name'] = str(name)
-        pm['Style']['LineStyle']['color'] = color
-        pm['Polygon']['extrude'] = extrude
-        pm['Polygon']['altitudeMode'] = mode
-        cl = pm['Polygon']['outerBoundaryIs']['LinearRing']['coordinates'].split()
-        n = [xy + ',' + str(height) for xy in cl]
-        s = ' '.join(n)
-        pm['Polygon']['outerBoundaryIs']['LinearRing']['coordinates'] = s
-        
-    # write the styled xml
-    sout = xmltodict.unparse(obj, pretty=True)
-    with open(dest, 'w') as fout:
-        fout.write(sout)
+            pm_name = placemark_name
+            
+        if placemark_descr in gdf.columns:
+            pm_descr = str(row[placemark_descr])
+        else:
+            pm_descr = placemark_descr
+            
+        p = kml.Placemark(ns, 'id', pm_name, pm_descr)
+        p.geometry =  kml.Geometry(geometry=row.geometry, altitude_mode=altitude_mode, extrude=extrude_mode)
+        d.append(p)
+    
+    #save reslults
+    with open('_test.kml', 'w') as fout:
+        fout.write(k.to_string(prettyprint=True))
