@@ -455,3 +455,57 @@ def write_kml(gdf, dest, height_col='', altitude_mode='clampToGround', extrude_m
     #save reslults
     with open('_test.kml', 'w') as fout:
         fout.write(k.to_string(prettyprint=True))
+
+
+def super_overlay(folder, name, depth, x0, y0, x1, y1):
+    import xmltodict
+    """
+    Create a super_overlay
+    https://developers.google.com/kml/documentation/regions
+    """
+    minLodPixels=256
+    # end clause for recurstion
+    if len([c for c in name if c in '0123']) > depth:
+        return
+    
+    res = {'kml':{}}
+    res['kml']['Document'] = {'name':name}
+    # Own Region
+    res['kml']['Document']['Region'] = {}
+    res['kml']['Document']['Region']['Lod'] = {'minLodPixels':minLodPixels,'maxLodPixels':-1}
+    res['kml']['Document']['Region']['LatLonAltBox'] = {'west':x0, 'east':x1, 'south':y0, 'north':y1}
+
+    # Own Overlay
+    res['kml']['Document']['GroundOverlay'] = {}
+    res['kml']['Document']['GroundOverlay']['Icon'] = {'href':f'{name}.png'}
+    res['kml']['Document']['GroundOverlay']['LatLonAltBox'] = {'west':x0, 'east':x1, 'south':y0, 'north':y1}
+
+    # Networklinks to children
+    dx = x0 + (x1 - x0) / 2
+    dy = y0 + (y1 - y0) / 2
+    params = [
+        {'folder':folder, 'name':name + '0', 'depth':depth, 'x0':x0, 'y0':dy, 'x1':dx, 'y1':y1},
+        {'folder':folder, 'name':name + '1', 'depth':depth, 'x0':dx, 'y0':dy, 'x1':x1, 'y1':y1},
+        {'folder':folder, 'name':name + '2', 'depth':depth, 'x0':x0, 'y0':y0, 'x1':dx, 'y1':dy},
+        {'folder':folder, 'name':name + '3', 'depth':depth, 'x0':dx, 'y0':y0, 'x1':x1, 'y1':dy}
+    ]
+
+    res['kml']['Document']['NetworkLink'] = []
+    for param in params:
+        folder_, name_, depth_, x0_, y0_, x1_, y1_ = param
+        nwl  = {'name':param['name']}
+        nwl['Region'] = {}
+        nwl['Region']['Lod'] = {'minLodPixels':minLodPixels, 'maxLodPixels':-1}
+        nwl['Region']['LatLonAltBox'] = {'west':param['x0'], 'east':param['x1'], 'south':param['y0'], 'north':param['y0']}
+        nwl['Link'] = {'href':param['name'] + '.kml', 'viewRefreshMode':'onRegion'}
+        res['kml']['Document']['NetworkLink'].append(nwl)
+        
+        # Recursion!!!
+        super_overlay(**param)
+        
+    s = xmltodict.unparse(res, pretty=True)
+    
+    with open(f'{folder}/{name}.kml', 'w') as fout:
+        fout.write(s)
+        
+    return 
