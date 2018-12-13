@@ -144,13 +144,24 @@ def keydown(event):
 
 	try:
 		c_ist = ord(event.char)
+		#print('Key pressed ord=', c_ist)
 
 
-		if c_ist == 10 or c_ist == 13: c_ist = 172
+		if c_ist == 10 or c_ist == 13: 
+			c_ist = 172
 
 		# tabulator key
-		if c_ist == 9:
-			c_ist = 8901
+		if c_ist == 9: c_ist = 8901
+
+		# Ctrl + C
+		if c_ist == 3: c_ist = 9426	
+
+		# Ctrl + V
+		if c_ist == 22: c_ist = 9445	
+
+
+		# Ctrl + X
+		if c_ist == 24: c_ist = 9447			
 
 		g_typed_all += 1
 		perc = round(100*g_typed_wrong/g_typed_all,3)
@@ -243,7 +254,7 @@ g_typed_all = 0
 g_typed_wrong = 0
 g_master = 0
 g_file_name = ''
-g_special_chars = r"{}*#%&/[]+@_$|\<>=^~"
+g_special_chars = r"{}*#%&/[]+@_$|\<>=^~ⓒⓥⓧ"
 g_special_chars_count = 3
 g_text_encoding = 'utf-8'
 g_last_position = 0
