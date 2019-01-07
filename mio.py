@@ -25,7 +25,7 @@ from nbconvert.preprocessors import ExecutePreprocessor
 import win32com.client
 import affine
 
-
+# cou can get the WKT string unsing ogrinfor file layer
 WKT_SWISS="""PROJCS["unnamed",
 GEOGCS["unnamed",
 	DATUM["Switzerland_CH_1903",
@@ -39,6 +39,22 @@ PARAMETER["central_meridian",7.4395833333],
 PARAMETER["false_easting",600000],
 PARAMETER["false_northing",200000],
 UNIT["Meter",1.0]]
+"""
+
+WKT_SWISS_95="""\
+PROJCS["unnamed",
+    GEOGCS["unnamed",
+        DATUM["MIF 999,10,674.374,15.156,405.346",
+            SPHEROID["Bessel 1841",6377397.155,299.1528128],
+            TOWGS84[674.374,15.156,405.346,0,0,0,0]],
+        PRIMEM["Greenwich",0],
+        UNIT["degree",0.0174532925199433]],
+    PROJECTION["Swiss_Oblique_Cylindrical"],
+    PARAMETER["latitude_of_center",46.952405555556],
+    PARAMETER["central_meridian",7.439583333333],
+    PARAMETER["false_easting",2600000],
+    PARAMETER["false_northing",1200000],
+    UNIT["Meter",1.0]]
 """
 
 WKT_WGS="""GEOGCS["unnamed",
