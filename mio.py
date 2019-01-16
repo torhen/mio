@@ -525,3 +525,27 @@ def super_overlay(folder, name, depth, x0, y0, x1, y1):
         fout.write(s)
         
     return 
+
+
+def read_loss(los_file):
+    basename = os.path.basename(los_file)
+    dbf_path = os.path.dirname(los_file)
+    dbf_path = os.path.join(dbf_path, 'pathloss.dbf')
+    pl = read_dbf(dbf_path)
+    pl = pl.set_index('FILE_NAME')
+ 
+    ser = pl.loc[basename]
+    ulx = ser.ULXMAP
+    uly = ser.ULYMAP
+    nx = ser.NCOLS
+    ny = ser.NROWS
+    res = ser.RESOLUTION
+    #print (basename,ulx,uly,nx,ny,res)
+    r = np.fromfile(los_file, dtype='int16')
+    r.resize(ny, nx)
+    df = pd.DataFrame(r)
+    df.columns = np.linspace(ulx, ulx+res*nx-res, nx)
+    df.index = np.linspace(uly-res, uly-res*nx, ny)
+    df = df/16
+
+    return df
