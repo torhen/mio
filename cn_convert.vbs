@@ -340,5 +340,8 @@ end function
 
 
 
-main "\\swi.srse.net\dfs\Info\TE\Hua_Eng\RE\4.5G and TK Site solution\Detail Design", "dest_upgr", "jobs_upgr.txt", ".+v3.+\.xlsx"
-main "\\weshare.swi.srse.net\ifr\inf01\0011\6_Partners\HUAWEI\Ryan_project\10_Site_Solution", "dest_ryan", "jobs_ryan.txt", ".+\.xlsx"
+'main "\\swi.srse.net\dfs\Info\TE\Hua_Eng\RE\4.5G and TK Site solution\Detail Design", "dest_upgr", "jobs_upgr.txt", ".+v3.+\.xlsx"
+'main "\\weshare.swi.srse.net\ifr\inf01\0011\6_Partners\HUAWEI\Ryan_project\10_Site_Solution", "dest_ryan", "jobs_ryan.txt", ".+\.xlsx"
+
+
+main "\\weshare-p.swi.srse.net\team\uz2e\6_Partners\HUAWEI\Ryan_project\10_Site_Solution", "dest_ryan", "jobs_ryan.txt", ".+\.xlsx"
