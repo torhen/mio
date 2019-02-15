@@ -109,7 +109,7 @@ def read_raster(raster_file):
 	""" Read a raster file and return a list of dataframes"""
 	ds = rasterio.open(raster_file)
 	t = ds.transform
-	# chenged from t ds.affine
+	# changed from t ds.affine
    
 	df_list = []
 	# band counts is based 1
@@ -366,27 +366,6 @@ def run_mb(mb_script):
 	subprocess.run(['mapbasic.exe', '-D', path_mb], check=True, shell=True)
 	subprocess.run(['mapinfow.exe', path_mbx, path_mb], check=True, shell=True)
 
-def combine_small(big, small, func=np.maximum):
-    """Combine a big with a small dataframe using func, big will be changed"""
-    #small = small.copy()
-    y0 = small.index[0]
-    y1 = small.index[-1]
-    ys = (y1-y0) / (len(small.index)-1)
-
-    x0 = small.columns[0]
-    x1 = small.columns[-1]
-    xs = (x1-x0) / (len(small.index)-1)
-    
-    part = big.loc[y0:y1, x0:x1]
-    
-    if part.shape != small.shape:
-        # small overlapping big
-        small = small.copy().reindex(index=part.index, columns=part.columns)
-    part_res = func(part, small)
-    
-    big.loc[y0:y1, x0:x1] = part_res
-
-
 def disagg(vec):
     """Dissagregate collections and multi geomtries"""
 
@@ -427,50 +406,6 @@ def write_geojson(vec, dest):
         os.remove(dest)
         
     vec.to_file(dest, driver='GeoJSON', encoding='utf-8')
-
-
-def write_kml(gdf, dest, height_col='', altitude_mode='clampToGround', extrude_mode=0, placemark_name='', placemark_descr='', doc_name=''):
-    """For now only polygons are supported"""
-    from fastkml import kml
-    
-    # WGS 84
-    gdf = gdf.to_crs({'init': 'epsg:4326'})
-    
-    # add heights 2.5 d
-    if height_col != '':
-        l = []
-        for ind, row in gdf.iterrows():
-            height = row[height_col]
-            geom3d = shapely.ops.transform(lambda x,y: (x,y,height) , row.geometry)
-            l.append(geom3d)
-        gdf.geometry = l
-    
-    # make kml
-    k = kml.KML()
-    ns = '{http://www.opengis.net/kml/2.2}'
-    d = kml.Document(ns, 'docid', doc_name)
-    k.append(d)
-
-    for ind, row in gdf.iterrows():
-        if placemark_name in gdf.columns:
-            pm_name = str(row[placemark_name])
-        elif placemark_name =='':
-        	pm_name = str(ind)
-        else:
-            pm_name = placemark_name
-            
-        if placemark_descr in gdf.columns:
-            pm_descr = str(row[placemark_descr])
-        else:
-            pm_descr = placemark_descr
-            
-        p = kml.Placemark(ns, 'id', pm_name, pm_descr)
-        p.geometry =  kml.Geometry(geometry=row.geometry, altitude_mode=altitude_mode, extrude=extrude_mode)
-        d.append(p)
-    
-    #save reslults
-    with open('_test.kml', 'w') as fout:
-        fout.write(k.to_string(prettyprint=True))
 
 
 def super_overlay(folder, name, depth, x0, y0, x1, y1):
@@ -545,7 +480,8 @@ def read_loss(los_file):
     r.resize(ny, nx)
     df = pd.DataFrame(r)
     df.columns = np.linspace(ulx, ulx+res*nx-res, nx)
-    df.index = np.linspace(uly-res, uly-res*nx, ny)
+    df.index = np.linspace(uly-res*nx, uly-res, ny)
+    df = df.sort_index(ascending=False)
     df = df/16
 
     return df
