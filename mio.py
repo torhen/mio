@@ -483,5 +483,11 @@ def read_loss(los_file):
     df.index = np.linspace(uly-res*nx, uly-res, ny)
     df = df.sort_index(ascending=False)
     df = df/16
-
     return df
+
+def show_perc(i, iall, istep):
+    if i % istep == 0:
+        print(f'{round(100*i/iall,2)}%', end=' ')
+        
+def file_title(s):
+    return os.path.splitext(os.path.basename(s))[0]
