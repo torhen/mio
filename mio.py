@@ -500,3 +500,32 @@ def show_perc(i, iall, istep):
         
 def file_title(s):
     return os.path.splitext(os.path.basename(s))[0]
+
+def raster2wgs(source_file, dest_file):
+    if not os.path.join(os.environ.get('GDAL_DATA'), 'gcs.csv'):
+        print('set GDAL_DATA environment variable')
+        return
+
+    dst_crs = 'EPSG:4326'
+
+    with rasterio.open(source_file) as src:
+        transform, width, height = rasterio.warp.calculate_default_transform(
+            src.crs, dst_crs, src.width, src.height, *src.bounds)
+        kwargs = src.meta.copy()
+        kwargs.update({
+            'crs': dst_crs,
+            'transform': transform,
+            'width': width,
+            'height': height
+        })
+
+        with rasterio.open(dest_file, 'w', **kwargs) as dst:
+            for i in range(1, src.count + 1):
+                rasterio.warp.reproject(
+                    source=rasterio.band(src, i),
+                    destination=rasterio.band(dst, i),
+                    src_transform=src.transform,
+                    src_crs=src.crs,
+                    dst_transform=transform,
+                    dst_crs=dst_crs,
+                    resampling=rasterio.warp.Resampling.nearest)
