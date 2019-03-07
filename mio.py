@@ -4,6 +4,7 @@ import sys,os,datetime
 import pandas as pd
 import numpy as np
 import subprocess
+from PIL import Image
 
 if USE_GEOPANDAS:
 	import geopandas as gpd
@@ -529,3 +530,18 @@ def raster2wgs(source_file, dest_file):
                     dst_transform=transform,
                     dst_crs=dst_crs,
                     resampling=rasterio.warp.Resampling.nearest)
+            bounds = dst.bounds
+    return bounds
+
+def tif2png(source, dest, color=(255, 0, 0, 255)):
+    img = Image.open(source)
+    img = img.convert("RGBA")
+    data = img.getdata()
+    newData = []
+    for item in data:
+        if item[0] == 0 and item[1] == 0 and item[2] == 0:
+            newData.append((255, 255, 255, 0))
+        else:
+            newData.append(color)
+    img.putdata(newData)
+    img.save(dest, "PNG")
