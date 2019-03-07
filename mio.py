@@ -162,7 +162,8 @@ def write_raster(df_list, dest_file, color_map=0):
                        dtype=dtype, 
                        transform=t, 
                        tfw='YES',
-                       crs = rasterio.crs.CRS.from_string(WKT_SWISS)) as dst:
+                       crs =WKT_SWISS
+                      ) as dst:
 		dst.write(a)
 		if color_map:
 			dst.write_colormap(1, color_map)
