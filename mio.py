@@ -154,7 +154,15 @@ def write_raster(df_list, dest_file, color_map=0):
 	dtype = a.dtype
 
 	# write raster, add color_map if defined, TFW = YES: create woldfile!
-	with rasterio.open(dest_file, mode='w', driver=driver_string, width=w, height=h, count=bands, dtype=dtype, transform=t, tfw='YES') as dst:
+	with rasterio.open(dest_file, 
+                       mode='w', 
+                       driver=driver_string, 
+                       width=w, height=h, 
+                       count=bands, 
+                       dtype=dtype, 
+                       transform=t, 
+                       tfw='YES',
+                       crs = rasterio.crs.CRS.from_string(WKT_SWISS)) as dst:
 		dst.write(a)
 		if color_map:
 			dst.write_colormap(1, color_map)
