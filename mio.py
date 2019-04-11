@@ -253,6 +253,12 @@ def write_tab(gdf,tab_name,crs_wkt=WKT_SWISS):
 		
 	gdf=gdf.copy()
 	
+	# int64 seems not to work anymore
+	for col in gdf:
+		dt = gdf[col].dtypes
+		if dt == 'int64':
+			gdf[col] = gdf[col].astype('float64')
+	
 	# bring multi to reduce object types (Fiona can save only on)
 	def to_multi(geom):
 		if geom.type=='Polygon':
@@ -410,7 +416,7 @@ def write_geojson(vec, dest):
     """Write only polygons, including attributes"""
 
     # WGS 84
-    vec = vec.to_crs({'init': 'epsg:4326'})
+    #vec = vec.to_crs({'init': 'epsg:4326'})
 
     if os.path.isfile(dest):
         os.remove(dest)
