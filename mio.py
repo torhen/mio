@@ -365,7 +365,9 @@ def run(str_or_list):
 	subprocess.run(str_or_list, check=True, shell=True)	
 	
 def run_mb(mb_script):
-	"""Run Mapbasic string as mapbasic script"""
+	"""Run Mapbasic string as mapbasic script
+mapinfow.exe and mapbascic : both paths must be set in the PATH env variable!
+	"""
 	wd = os.getcwd()
 
 	path_mb = os.path.join(wd, 'mb.mb')
@@ -378,9 +380,15 @@ def run_mb(mb_script):
     
 	with open(path_mb,'w') as fout: 
 		fout.write(mb_script)
-        
+    
+	# Compile
 	subprocess.run(['mapbasic.exe', '-D', path_mb], check=True, shell=True)
-	subprocess.run(['mapinfow.exe', path_mbx, path_mb], check=True, shell=True)
+	
+	# Run
+	try:
+		subprocess.run(['mapinfow.exe', path_mbx, path_mb], check=True, shell=True)
+	except:
+		print('subprocess run with error')
 
 def disagg(vec):
     """Dissagregate collections and multi geomtries"""
@@ -539,7 +547,7 @@ def raster2wgs(source_file, dest_file):
             bounds = dst.bounds
     return bounds
 
-def tif2png(source, dest, color=(255, 0, 0, 255)):
+def tif2png(source, dest):
     img = Image.open(source)
     img = img.convert("RGBA")
     data = img.getdata()
@@ -548,6 +556,6 @@ def tif2png(source, dest, color=(255, 0, 0, 255)):
         if item[0] == 0 and item[1] == 0 and item[2] == 0:
             newData.append((255, 255, 255, 0))
         else:
-            newData.append(color)
+            newData.append(item)
     img.putdata(newData)
     img.save(dest, "PNG")
