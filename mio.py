@@ -25,31 +25,29 @@ import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 import win32com.client
 import affine
+import inspect
+from typing import Union, List, Dict, get_type_hints
 
 # strict type checking support
-from typing import get_type_hints, Union, List, Dict
-def check_types(function):
-    # https://stackoverflow.com/questions/32844556/python-3-5-type-hints-can-i-check-if-function-arguments-match-type-hints
-    def type_checker(*args, **kwargs):
-        hints = get_type_hints(function)
+def check_types(d):
+    # get calling function name
+    curframe = inspect.currentframe()
+    calframe = inspect.getouterframes(curframe, 2)
+    fname = calframe[1][3]
+    
+    # get calling function object
+    obj = globals()[fname]
+    hints = get_type_hints(obj)
 
-        all_args = kwargs.copy()
-        all_args.update(dict(zip(function.__code__.co_varnames, args)))
+    # iterate all type hints
+    for attr_name, attr_type in hints.items():
+        if attr_name == 'return':
+            continue
 
-        for argument, argument_type in ((i, type(j)) for i, j in all_args.items()):
-            if argument in hints:
-                if not issubclass(argument_type, hints[argument]):
-                    raise TypeError('Type of {} is {} and not {}'.format(argument, argument_type, hints[argument]))
-
-        result = function(*args, **kwargs)
-
-        if 'return' in hints:
-            if type(result) != hints['return']:
-                raise TypeError('Type of result is {} and not {}'.format(type(result), hints['return']))
-
-        return result
-
-    return type_checker
+        if not isinstance(d[attr_name], attr_type):
+            raise TypeError(
+                'Argument %r is not of type %s' % (attr_name, attr_type)
+            )
 
 # cou can get the WKT string unsing ogrinfor file layer
 WKT_SWISS="""PROJCS["unnamed",
@@ -94,18 +92,18 @@ WKT_WGS="""GEOGCS["unnamed",
 MIF_SWISS='CoordSys Earth Projection 25, 1003, "m", 7.4395833333, 46.9524055555, 600000, 200000'
 MIF_WGS='CoordSys Earth Projection 1, 104'
 
-@check_types
 def read_dbf(dbfile:str):
 	"""read dbase file"""
+	check_types(locals())
 	from simpledbf import Dbf5
 	dbf = Dbf5(dbfile)
 	pl = dbf.to_dataframe()
 	pl.columns = [a.split('\x00')[0] for a in pl.columns] # remove strange characters in columns
 	return pl
 
-@check_types
 def run_nb(ju_nb:str):
 	"""Execute a jupyter notebook"""
+	check_types(locals())
 	if len(sys.argv)>2:
 		os.environ["JUPYTER_PARAMETER"] = sys.argv[2]
 	else:
@@ -131,9 +129,9 @@ def main():
 if __name__ == "__main__":
 	main()
 
-@check_types
 def read_raster(raster_file:str):
 	""" Read a raster file and return a list of dataframes"""
+	check_types(locals())
 	ds = rasterio.open(raster_file)
 	t = ds.transform
 	# changed from t ds.affine
@@ -154,13 +152,12 @@ def read_raster(raster_file:str):
 	ds.close()
 	return df_list
 
-@check_types
 def write_raster(df_list:pd.DataFrame, dest_file:str, color_map=0):
 	""" write df raster list to geo tiff together with world file, or Arcview ESRI grid text file
 		df  must be 'uint8' to apply color map
 		color_map is dictionary like {0:(255,0,0), 1:(0,255,0)}
 	"""
-	
+	check_types(locals())
 	driver_dict = {'.tif': 'GTiff', '.txt': 'AAIGrid', '.asc': 'AAIGrid', '.bil': 'EHdr'}
 	driver_string = driver_dict[os.path.splitext(dest_file)[1].lower()]
 	
@@ -195,10 +192,9 @@ def write_raster(df_list:pd.DataFrame, dest_file:str, color_map=0):
 		if color_map:
 			dst.write_colormap(1, color_map)
 
-@check_types
 def calc_affine(df):
 	"""generate transorm affine object from raster data frame """
-
+	check_types(locals())
 	x0 = df.columns[0]
 	y0 = df.index[0]
 	dx = df.columns[1] - df.columns[0]
@@ -208,9 +204,9 @@ def calc_affine(df):
 	# y0 - dy because anker point is in the south!
 	return t
 
-@check_types
 def vectorize(df:pd.DataFrame):
 	""" make shapes from raster, genial! """
+	check_types(locals())
 	t = calc_affine(df)
 	a = df.values
 	# zeros an nan are left open space, means mask = True!
@@ -226,10 +222,9 @@ def vectorize(df:pd.DataFrame):
 	gdf['val']=value
 	return gdf
 
-@check_types
-def rasterize(vector_gdf:gpd.GeoDataFrame, raster_df:Union[pd.DataFrame,int], values_to_burn:int=128, fill:int=0, all_touched:bool=False):
+def rasterize(vector_gdf:gpd.GeoDataFrame, raster_df, values_to_burn:int=128, fill:int=0, all_touched:bool=False):
 	""" burn vector features into a raster, input ruster or resolution"""
-
+	check_types(locals())
 	# raster_df is integer, create raster with resolution raster_df 
 	if isinstance(raster_df, int):
 		res = raster_df
@@ -260,9 +255,9 @@ def rasterize(vector_gdf:gpd.GeoDataFrame, raster_df:Union[pd.DataFrame,int], va
 	res_df = pd.DataFrame(result, columns=raster_df.columns, index=raster_df.index)
 	return res_df
 
-@check_types
 def refresh_excel(excel_file:str):
 	"""refreshe excel data and pivot tables"""
+	check_types(locals())
 	excel_file=os.path.abspath(excel_file)
 	xlapp = win32com.client.DispatchEx("Excel.Application")
 	wb = xlapp.workbooks.open(excel_file)
@@ -277,10 +272,9 @@ def refresh_excel(excel_file:str):
 	wb.Save()
 	xlapp.Quit()
 
-@check_types
 def write_tab(gdf:gpd.GeoDataFrame, tab_name:str ,crs_wkt:str=WKT_SWISS):
 	"""Write Mapinfo format, all geometry types in one file"""
-		
+	check_types(locals())	
 	gdf=gdf.copy()
 	
 	# int64 seems not to work anymore
@@ -357,9 +351,9 @@ def write_tab(gdf:gpd.GeoDataFrame, tab_name:str ,crs_wkt:str=WKT_SWISS):
 	gdf.to_file(tab_name,driver='MapInfo File',crs_wkt=crs_wkt,schema=schema)    
 	return print(len(gdf), 'rows of type', geo_obj_type, 'written to mapinfo file.')
 	
-@check_types
-def swiss_wgs(sX:Union[float,int,str],sY:Union[float,int,str]):
+def swiss_wgs(sX,sY):
 	"""Aprroximation CH1903 -> WGS84 https://de.wikipedia.org/wiki/Schweizer_Landeskoordinaten"""
+	check_types(locals())
 	sX=str(sX)
 	sY=str(sY)
 
@@ -374,9 +368,9 @@ def swiss_wgs(sX:Union[float,int,str],sY:Union[float,int,str]):
 	else:
 		return (-1,-1)
 
-@check_types
-def wgs_swiss(sLon:Union[float,str],sLat:Union[float,str]):
+def wgs_swiss(sLon, sLat):
 	"""Aprroximation WGS84 -> CH1903 https://de.wikipedia.org/wiki/Schweizer_Landeskoordinaten"""
+	check_types(locals())
 	sLon=str(sLon)
 	sLat=str(sLat)
 
@@ -391,16 +385,16 @@ def wgs_swiss(sLon:Union[float,str],sLat:Union[float,str]):
 	else:
 		return (-1,-1)
     
-@check_types
 def run(str_or_list:Union[str,list]):
 	"""Better replacement for os.system()"""
+	check_types(locals())
 	subprocess.run(str_or_list, check=True, shell=True)	
 
-@check_types
 def run_mb(mb_script:str):
 	"""Run Mapbasic string as mapbasic script
 mapinfow.exe and mapbascic : both paths must be set in the PATH env variable!
 	"""
+	check_types(locals())
 	wd = os.getcwd()
 
 	path_mb = os.path.join(wd, 'mb.mb')
@@ -423,10 +417,9 @@ mapinfow.exe and mapbascic : both paths must be set in the PATH env variable!
 	except:
 		print('subprocess run with error')
 
-@check_types
 def disagg(vec:gpd.GeoDataFrame):
     """Dissagregate collections and multi geomtries"""
-
+    check_types(locals())
     # Split GeometryCollections
     no_coll = []
     for i, row in vec.iterrows():
@@ -454,9 +447,9 @@ def disagg(vec:gpd.GeoDataFrame):
 
     return gpd.GeoDataFrame(res, crs=vec.crs).reset_index(drop=True)
 
-@check_types
 def write_geojson(vec:gpd.GeoDataFrame, dest:str):
     """Write only polygons, including attributes"""
+    check_types(locals())
 
     # WGS 84
     #vec = vec.to_crs({'init': 'epsg:4326'})
@@ -520,8 +513,8 @@ def super_overlay(folder, name, depth, x0, y0, x1, y1):
         
     return 
 
-@check_types
 def read_loss(los_file:str):
+    check_types(locals())
     basename = os.path.basename(los_file)
     dbf_path = os.path.dirname(los_file)
     dbf_path = os.path.join(dbf_path, 'pathloss.dbf')
@@ -544,17 +537,17 @@ def read_loss(los_file:str):
     df = df/16
     return df
 
-@check_types
 def show_perc(i:int, iall:int, istepint):
+    check_types(locals())
     if i % istep == 0:
         print(f'{round(100*i/iall,2)}%', end=' ')
         
-@check_types
 def file_title(path:str):
+    check_types(locals())
     return os.path.splitext(os.path.basename(path))[0]
 
-@check_types
 def raster2wgs(source_file:str, dest_file:str):
+    check_types(locals())
     if not os.path.join(os.environ.get('GDAL_DATA'), 'gcs.csv'):
         print('set GDAL_DATA environment variable')
         return
@@ -585,8 +578,8 @@ def raster2wgs(source_file:str, dest_file:str):
             bounds = dst.bounds
     return bounds
 
-@check_types
 def tif2png(source:str, dest:str):
+    check_types(locals())
     img = Image.open(source)
     img = img.convert("RGBA")
     data = img.getdata()
