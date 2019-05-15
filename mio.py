@@ -530,7 +530,7 @@ def read_loss(los_file:str):
     df = df/16
     return df
 
-def show_perc(i:int, iall:int, istepint):
+def show_perc(i:int, iall:int, istep:int):
     check_types(show_perc, locals())
     if i % istep == 0:
         print(f'{round(100*i/iall,2)}%', end=' ')
