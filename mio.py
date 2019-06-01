@@ -584,3 +584,9 @@ def tif2png(source:str, dest:str):
             newData.append(item)
     img.putdata(newData)
     img.save(dest, "PNG")
+    
+def check_path(path):
+    if os.path.isfile(path):
+        return path
+    else:
+        raise Error(f'Error: {path} not found')
