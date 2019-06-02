@@ -3,7 +3,7 @@ USE_GEOPANDAS = True
 import sys,os,datetime
 import pandas as pd
 import numpy as np
-import subprocess
+import subprocess, time, datetime
 from PIL import Image
 
 if USE_GEOPANDAS:
@@ -84,6 +84,23 @@ WKT_WGS="""GEOGCS["unnamed",
 
 MIF_SWISS='CoordSys Earth Projection 25, 1003, "m", 7.4395833333, 46.9524055555, 600000, 200000'
 MIF_WGS='CoordSys Earth Projection 1, 104'
+
+def check_path(path:str):
+    check_types(check_path, locals())
+    if os.path.isfile(path):
+        title = os.path.basename(path)
+        bytes = os.path.getsize(path)
+        ctime = datetime.datetime.fromtimestamp(os.path.getctime(path))
+        ctime = str(ctime)[0:19]
+        size, unit = bytes, 'bytes'
+        if bytes > 2**10: size, unit = round(bytes / 2**10, 1), 'KB'
+        if bytes > 2**20: size, unit = round(bytes / 2**20, 1), 'MB'
+        if bytes > 2**30: size, unit = round(bytes / 2**30, 1), 'GB'
+        if bytes > 2**40: size, unit = round(bytes / 2**40, 1), 'TB'
+        print(f"{title}\t({size} {unit})\tcreated: {ctime}")
+        return path
+    else:
+        raise Error(f'Error: {path} not found')
 
 def read_dbf(dbfile:str):
 	"""read dbase file"""
@@ -585,8 +602,3 @@ def tif2png(source:str, dest:str):
     img.putdata(newData)
     img.save(dest, "PNG")
     
-def check_path(path):
-    if os.path.isfile(path):
-        return path
-    else:
-        raise Error(f'Error: {path} not found')
