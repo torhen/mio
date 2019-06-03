@@ -100,7 +100,8 @@ def check_path(path:str):
         print(f"{title}\t({size} {unit})\tcreated: {ctime}")
         return path
     else:
-        raise Error(f'Error: {path} not found')
+        abs_path = os.path.abspath(path)
+        print(f'MISSING FILE: {abs_path}')
 
 def read_dbf(dbfile:str):
 	"""read dbase file"""
