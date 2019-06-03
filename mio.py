@@ -103,13 +103,11 @@ def check_path(path:str):
         abs_path = os.path.abspath(path)
         print(f'MISSING FILE: {abs_path}')
         
-def check_folder(path:str):
-    check_types(check_folder, locals())
-    if os.path.isdir(path):
-        return 
-    else:
-        abs_path = os.path.abspath(path)
-        print(f'MISSING FOLDER: {abs_path}')
+def check_folders(*folders):
+    for folder in folders:
+        if not os.path.isdir(folder):
+            abs_path = os.path.abspath(folder)
+            print(f'MISSING FOLDER: {abs_path}')
     
 
 def read_dbf(dbfile:str):
