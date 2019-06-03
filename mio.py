@@ -97,7 +97,7 @@ def check_path(path:str):
         if bytes > 2**20: size, unit = round(bytes / 2**20, 1), 'MB'
         if bytes > 2**30: size, unit = round(bytes / 2**30, 1), 'GB'
         if bytes > 2**40: size, unit = round(bytes / 2**40, 1), 'TB'
-        print(f"{title}\t({size} {unit})\tcreated: {ctime}")
+        print(f"ok {title}\t({size} {unit})\tcreated: {ctime}")
         return path
     else:
         abs_path = os.path.abspath(path)
