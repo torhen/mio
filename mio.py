@@ -240,7 +240,7 @@ def vectorize(df:pd.DataFrame):
 	gdf['val']=value
 	return gdf
 
-def rasterize(vector_gdf:gpd.GeoDataFrame, raster_df, values_to_burn:int=128, fill:int=0, all_touched:bool=False):
+def rasterize(vector_gdf:gpd.GeoDataFrame, raster_df, values_to_burn=128, fill:int=0, all_touched:bool=False):
 	""" burn vector features into a raster, input ruster or resolution"""
 	check_types(rasterize, locals())
 	# raster_df is integer, create raster with resolution raster_df 
