@@ -85,6 +85,18 @@ WKT_WGS="""GEOGCS["unnamed",
 MIF_SWISS='CoordSys Earth Projection 25, 1003, "m", 7.4395833333, 46.9524055555, 600000, 200000'
 MIF_WGS='CoordSys Earth Projection 1, 104'
 
+def clean_ascii(df):
+    df = df.copy()
+    def clean(s):
+        s = str(s)
+        s = [c for c in s if ord(c) < 256]
+        return ''.join(s)
+
+    for col in df.columns:
+        if col != 'geometry':
+            df[col] = df[col].map(clean)
+    return df
+
 def check_path(path:str):
     check_types(check_path, locals())
     if os.path.isfile(path):
