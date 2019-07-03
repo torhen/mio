@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import subprocess, time, datetime
 from PIL import Image
+import pathlib
 
 if USE_GEOPANDAS:
 	import geopandas as gpd
@@ -27,6 +28,20 @@ import win32com.client
 import affine
 import inspect
 from typing import Union, List, Dict, get_type_hints
+
+
+def colset(df, cols_dic):
+    """ filter and rename columns in one step"""
+    return df[list(cols_dic)].rename(columns=cols_dic)
+
+def snap(df, fn=lambda x: x.shape, msg=None):
+    """ Custom Help function to print things in method chaining.
+        Returns back the df to further use in chaining.
+    """
+    if msg:
+        print(msg)
+    print(fn(df))
+    return df
 
 # strict type checking support
 def check_types(func, loca):
@@ -97,8 +112,8 @@ def clean_ascii(df):
             df[col] = df[col].map(clean)
     return df
 
-def check_path(path:str):
-    check_types(check_path, locals())
+def check_path(path):
+    path = str(path)
     if os.path.isfile(path):
         title = os.path.basename(path)
         bytes = os.path.getsize(path)
@@ -117,14 +132,15 @@ def check_path(path:str):
         
 def check_folders(*folders):
     for folder in folders:
+        folder = str(folder)
         if not os.path.isdir(folder):
             abs_path = os.path.abspath(folder)
             print(f'MISSING FOLDER: {abs_path}')
     
 
-def read_dbf(dbfile:str):
+def read_dbf(dbfile):
 	"""read dbase file"""
-	check_types(read_dbf, locals())
+	dbfile = str(dbfile)
 	from simpledbf import Dbf5
 	dbf = Dbf5(dbfile)
 	pl = dbf.to_dataframe()
@@ -159,9 +175,9 @@ def main():
 if __name__ == "__main__":
 	main()
 
-def read_raster(raster_file:str):
+def read_raster(raster_file):
 	""" Read a raster file and return a list of dataframes"""
-	check_types(read_raster, locals())
+	raster_file = str(raster_file) # in case it's a pathlib Path
 	ds = rasterio.open(raster_file)
 	t = ds.transform
 	# changed from t ds.affine
@@ -182,12 +198,12 @@ def read_raster(raster_file:str):
 	ds.close()
 	return df_list
 
-def write_raster(df_list:pd.DataFrame, dest_file:str, color_map=0):
+def write_raster(df_list:pd.DataFrame, dest_file, color_map=0):
+	dest_file = str(dest_file)
 	""" write df raster list to geo tiff together with world file, or Arcview ESRI grid text file
 		df  must be 'uint8' to apply color map
 		color_map is dictionary like {0:(255,0,0), 1:(0,255,0)}
 	"""
-	check_types(write_raster, locals())
 	driver_dict = {'.tif': 'GTiff', '.txt': 'AAIGrid', '.asc': 'AAIGrid', '.bil': 'EHdr'}
 	driver_string = driver_dict[os.path.splitext(dest_file)[1].lower()]
 	
@@ -285,8 +301,9 @@ def rasterize(vector_gdf:gpd.GeoDataFrame, raster_df, values_to_burn=128, fill:i
 	res_df = pd.DataFrame(result, columns=raster_df.columns, index=raster_df.index)
 	return res_df
 
-def refresh_excel(excel_file:str):
+def refresh_excel(excel_file):
 	"""refreshe excel data and pivot tables"""
+	excel_file = str(excel_file)
 	check_types(refresh_excel, locals())
 	excel_file=os.path.abspath(excel_file)
 	xlapp = win32com.client.DispatchEx("Excel.Application")
@@ -302,8 +319,9 @@ def refresh_excel(excel_file:str):
 	wb.Save()
 	xlapp.Quit()
 
-def write_tab(gdf:gpd.GeoDataFrame, tab_name:str ,crs_wkt:str=WKT_SWISS):
+def write_tab(gdf:gpd.GeoDataFrame, tab_name ,crs_wkt:str=WKT_SWISS):
 	"""Write Mapinfo format, all geometry types in one file"""
+	tab_name = str(tab_name)
 	check_types(write_tab, locals())	
 	gdf=gdf.copy()
 	
@@ -477,8 +495,9 @@ def disagg(vec:gpd.GeoDataFrame):
 
     return gpd.GeoDataFrame(res, crs=vec.crs).reset_index(drop=True)
 
-def write_geojson(vec:gpd.GeoDataFrame, dest:str):
+def write_geojson(vec:gpd.GeoDataFrame, dest):
     """Write only polygons, including attributes"""
+    dest = str(dest)
     check_types(write_geojson, locals())
 
     # WGS 84
@@ -543,7 +562,8 @@ def super_overlay(folder, name, depth, x0, y0, x1, y1):
         
     return 
 
-def read_loss(los_file:str):
+def read_loss(los_file):
+    los_file = str(los_file)
     check_types(read_loss, locals())
     basename = os.path.basename(los_file)
     dbf_path = os.path.dirname(los_file)
@@ -576,7 +596,9 @@ def file_title(path:str):
     check_types(file_title, locals())
     return os.path.splitext(os.path.basename(path))[0]
 
-def raster2wgs(source_file:str, dest_file:str):
+def raster2wgs(source_file, dest_file):
+    source_file = str(source_file)
+    dest_file = str(dest_file)
     check_types(raster2wgs, locals())
     if not os.path.join(os.environ.get('GDAL_DATA'), 'gcs.csv'):
         print('set GDAL_DATA environment variable')
@@ -608,8 +630,10 @@ def raster2wgs(source_file:str, dest_file:str):
             bounds = dst.bounds
     return bounds
 
-def tif2png(source:str, dest:str):
+def tif2png(source, dest):
     check_types(tif2png, locals())
+    source = str(source)
+    dest = dest(source)
     img = Image.open(source)
     img = img.convert("RGBA")
     data = img.getdata()
