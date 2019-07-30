@@ -328,7 +328,7 @@ def write_tab(gdf:gpd.GeoDataFrame, tab_name ,crs_wkt:str=WKT_SWISS):
 	# int64 seems not to work anymore
 	for col in gdf:
 		dt = gdf[col].dtypes
-		if dt == 'int64':
+		if dt == 'int32' or dt == 'int64':
 			gdf[col] = gdf[col].astype('float64')
 	
 	# bring multi to reduce object types (Fiona can save only on)
