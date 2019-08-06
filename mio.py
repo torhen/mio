@@ -438,7 +438,7 @@ def run(str_or_list:Union[str,list]):
 	check_types(run, locals())
 	subprocess.run(str_or_list, check=True, shell=True)	
 
-def run_mb(mb_script:str):
+def run_mb(mb_script:str, mapinfo_path=''):
 	"""Run Mapbasic string as mapbasic script
 mapinfow.exe and mapbascic : both paths must be set in the PATH env variable!
 	"""
@@ -461,9 +461,9 @@ mapinfow.exe and mapbascic : both paths must be set in the PATH env variable!
 	
 	# Run
 	try:
-		subprocess.run(['mapinfow.exe', path_mbx, path_mb], check=True, shell=True)
-	except:
-		print('subprocess run with error')
+		subprocess.run([rf'{mapinfo_path}\mapinfow.exe', path_mbx, path_mb], check=True, shell=True)
+	except subprocess.CalledProcessError as e:
+		print(e)
 
 def disagg(vec:gpd.GeoDataFrame):
     """Dissagregate collections and multi geomtries"""
