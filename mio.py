@@ -29,6 +29,8 @@ import affine
 import inspect
 from typing import Union, List, Dict, get_type_hints
 
+def get_time():
+    print(str(datetime.datetime.now())[11:19])
 
 def colset(df, cols_dic):
     """ filter and rename columns in one step"""
