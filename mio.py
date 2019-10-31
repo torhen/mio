@@ -6,6 +6,7 @@ import numpy as np
 import subprocess, time, datetime
 from PIL import Image
 import pathlib
+import sqlite3
 
 if USE_GEOPANDAS:
 	import geopandas as gpd
@@ -180,6 +181,7 @@ def main():
 if __name__ == "__main__":
 	main()
 
+
 def read_raster(raster_file):
 	""" Read a raster file and return a list of dataframes"""
 	raster_file = str(raster_file) # in case it's a pathlib Path
@@ -273,38 +275,39 @@ def vectorize(df:pd.DataFrame):
 	gdf['val']=value
 	return gdf
 
-def rasterize(vector_gdf:gpd.GeoDataFrame, raster_df, values_to_burn=128, fill:int=0, all_touched:bool=False):
-	""" burn vector features into a raster, input ruster or resolution"""
-	check_types(rasterize, locals())
-	# raster_df is integer, create raster with resolution raster_df 
-	if isinstance(raster_df, int):
-		res = raster_df
-		x0, y0, x1, y1 = vector_gdf.geometry.total_bounds
-		x0 = int(x0 // res * res - res)
-		x1 = int(x1 // res * res + res)
-		y0 = int(y0 // res * res - res)
-		y1 = int(y1 // res * res + res)
-		raster_df = pd.DataFrame(columns=range(x0, x1, res), index=range(y1, y0, -res))
+if USE_GEOPANDAS:
+	def rasterize(vector_gdf:gpd.GeoDataFrame, raster_df, values_to_burn=128, fill:int=0, all_touched:bool=False):
+		""" burn vector features into a raster, input ruster or resolution"""
+		check_types(rasterize, locals())
+		# raster_df is integer, create raster with resolution raster_df 
+		if isinstance(raster_df, int):
+			res = raster_df
+			x0, y0, x1, y1 = vector_gdf.geometry.total_bounds
+			x0 = int(x0 // res * res - res)
+			x1 = int(x1 // res * res + res)
+			y0 = int(y0 // res * res - res)
+			y1 = int(y1 // res * res + res)
+			raster_df = pd.DataFrame(columns=range(x0, x1, res), index=range(y1, y0, -res))
 
-	# no geometry to burn
-	if vector_gdf.unary_union.area==0:
-		return raster_df
-	
-	try:
-		geom_value_list = zip(vector_gdf.geometry, values_to_burn)
-	except:
-		geom_value_list = ( (geom, values_to_burn) for geom in vector_gdf.geometry )
-	
-	t = calc_affine(raster_df)
-	
-	result = rasterio.features.rasterize(geom_value_list, 
-										 out_shape=raster_df.shape, 
-										 transform=t, 
-										 fill=fill, 
-										 all_touched=all_touched)
-	
-	res_df = pd.DataFrame(result, columns=raster_df.columns, index=raster_df.index)
-	return res_df
+		# no geometry to burn
+		if vector_gdf.unary_union.area==0:
+			return raster_df
+		
+		try:
+			geom_value_list = zip(vector_gdf.geometry, values_to_burn)
+		except:
+			geom_value_list = ( (geom, values_to_burn) for geom in vector_gdf.geometry )
+		
+		t = calc_affine(raster_df)
+		
+		result = rasterio.features.rasterize(geom_value_list, 
+											 out_shape=raster_df.shape, 
+											 transform=t, 
+											 fill=fill, 
+											 all_touched=all_touched)
+		
+		res_df = pd.DataFrame(result, columns=raster_df.columns, index=raster_df.index)
+		return res_df
 
 def refresh_excel(excel_file):
 	"""refreshe excel data and pivot tables"""
@@ -324,85 +327,86 @@ def refresh_excel(excel_file):
 	wb.Save()
 	xlapp.Quit()
 
-def write_tab(gdf:gpd.GeoDataFrame, tab_name ,crs_wkt:str=WKT_SWISS):
-	"""Write Mapinfo format, all geometry types in one file"""
-	tab_name = str(tab_name)
-	check_types(write_tab, locals())	
-	gdf=gdf.copy()
-	
-	# int64 seems not to work anymore
-	for col in gdf:
-		dt = gdf[col].dtypes
-		if dt == 'int32' or dt == 'int64':
-			gdf[col] = gdf[col].astype('float64')
-	
-	# bring multi to reduce object types (Fiona can save only on)
-	def to_multi(geom):
-		if geom.type=='Polygon':
-			return MultiPolygon([geom])
-		elif geom.type=='Line':
-			return MultiLine([geom])        
-		else:
-			return geom
-	
-	gdf.geometry=[to_multi(geom) for geom in gdf.geometry]
-	
-	# make the columns fit for Mapinfo
-	new_cols=[]
-	for s in gdf.columns:
-		s=''.join([c if c.isalnum() else '_' for c in s])
-		for i in range(5):
-			s=s.replace('__','_')
-		s=s.strip('_')
-		s=s[0:30]
+if USE_GEOPANDAS:
+		def write_tab(gdf:gpd.GeoDataFrame, tab_name ,crs_wkt:str=WKT_SWISS):
+			"""Write Mapinfo format, all geometry types in one file"""
+			tab_name = str(tab_name)
+			check_types(write_tab, locals())	
+			gdf=gdf.copy()
 
-		new_cols.append(s)
-	gdf.columns=new_cols
-			   
-	# create my own schema (without schema all strings are 254)
-	props={}
-	for col,typ in gdf.dtypes.iteritems():
-		if col!=gdf.geometry.name:
-			if str(typ).startswith('int'):
-				styp='int'
-			elif str(typ).startswith('float'):
-				styp='float'
+			# int64 seems not to work anymore
+			for col in gdf:
+				dt = gdf[col].dtypes
+				if dt == 'int32' or dt == 'int64':
+					gdf[col] = gdf[col].astype('float64')
+
+			# bring multi to reduce object types (Fiona can save only on)
+			def to_multi(geom):
+				if geom.type=='Polygon':
+					return MultiPolygon([geom])
+				elif geom.type=='Line':
+					return MultiLine([geom])        
+				else:
+					return geom
+
+			gdf.geometry=[to_multi(geom) for geom in gdf.geometry]
+
+			# make the columns fit for Mapinfo
+			new_cols=[]
+			for s in gdf.columns:
+				s=''.join([c if c.isalnum() else '_' for c in s])
+				for i in range(5):
+					s=s.replace('__','_')
+				s=s.strip('_')
+				s=s[0:30]
+
+				new_cols.append(s)
+			gdf.columns=new_cols
+					   
+			# create my own schema (without schema all strings are 254)
+			props={}
+			for col,typ in gdf.dtypes.iteritems():
+				if col!=gdf.geometry.name:
+					if str(typ).startswith('int'):
+						styp='int'
+					elif str(typ).startswith('float'):
+						styp='float'
+					else:
+						gdf[col]=gdf[col].astype('str')  
+						max_len=gdf[col].map(len).max()
+						if np.isnan(max_len):
+							max_len=1
+						styp='str:%d' % max_len
+					props[col]=styp
+					
+			schema={}
+			# set geometry type of the first object for the whole layer
+			if len(gdf)>0:
+				geo_obj_type=gdf.geometry.iloc[0].geom_type
+
 			else:
-				gdf[col]=gdf[col].astype('str')  
-				max_len=gdf[col].map(len).max()
-				if np.isnan(max_len):
-					max_len=1
-				styp='str:%d' % max_len
-			props[col]=styp
-			
-	schema={}
-	# set geometry type of the first object for the whole layer
-	if len(gdf)>0:
-		geo_obj_type=gdf.geometry.iloc[0].geom_type
+				geo_obj_type = 'Point'
+				
+			schema['geometry']= geo_obj_type
+				
+			schema['properties']=props
+			   
+			# delete files if already there, otherwise an error is raised
+			base_dest,ext_dest= os.path.splitext(tab_name)
+			if ext_dest.lower()=='.tab':
+				ext_list=['.tab','.map,','.dat','.id']
+			elif ext_dest.lower()=='.mif':
+				ext_list=['.mif','.mid']
+			else:
+				sys.exit("ERROR: extension of '%s' should be .tab or .mif." % tab_name)
 
-	else:
-		geo_obj_type = 'Point'
-		
-	schema['geometry']= geo_obj_type
-		
-	schema['properties']=props
-	   
-	# delete files if already there, otherwise an error is raised
-	base_dest,ext_dest= os.path.splitext(tab_name)
-	if ext_dest.lower()=='.tab':
-		ext_list=['.tab','.map,','.dat','.id']
-	elif ext_dest.lower()=='.mif':
-		ext_list=['.mif','.mid']
-	else:
-		sys.exit("ERROR: extension of '%s' should be .tab or .mif." % tab_name)
-	
-	for ext in ext_list:
-		file = base_dest + ext
-		if os.path.isfile(file):
-			os.remove(file)
+			for ext in ext_list:
+				file = base_dest + ext
+				if os.path.isfile(file):
+					os.remove(file)
 
-	gdf.to_file(tab_name,driver='MapInfo File',crs_wkt=crs_wkt,schema=schema)    
-	return print(len(gdf), 'rows of type', geo_obj_type, 'written to mapinfo file.')
+			gdf.to_file(tab_name,driver='MapInfo File',crs_wkt=crs_wkt,schema=schema)    
+			return print(len(gdf), 'rows of type', geo_obj_type, 'written to mapinfo file.')
 	
 def swiss_wgs(sX,sY):
 	"""Aprroximation CH1903 -> WGS84 https://de.wikipedia.org/wiki/Schweizer_Landeskoordinaten"""
@@ -470,48 +474,50 @@ mapinfow.exe and mapbascic : both paths must be set in the PATH env variable!
 	except subprocess.CalledProcessError as e:
 		print(e)
 
-def disagg(vec:gpd.GeoDataFrame):
-    """Dissagregate collections and multi geomtries"""
-    check_types(disagg, locals())
-    # Split GeometryCollections
-    no_coll = []
-    for i, row in vec.iterrows():
-        geom = row.geometry
-        if geom.type == 'GeometryCollection':
-            for part in geom:
-                row2 = row.copy()
-                row2.geometry = part
-                no_coll.append(row2)
+if USE_GEOPANDAS:
+	def disagg(vec:gpd.GeoDataFrame):
+		"""Dissagregate collections and multi geomtries"""
+		check_types(disagg, locals())
+		# Split GeometryCollections
+		no_coll = []
+		for i, row in vec.iterrows():
+			geom = row.geometry
+			if geom.type == 'GeometryCollection':
+				for part in geom:
+					row2 = row.copy()
+					row2.geometry = part
+					no_coll.append(row2)
 
-        else:
-                no_coll.append(row)           
+			else:
+					no_coll.append(row)           
 
-    # Split Multi geomries
-    res = []
-    for row in no_coll:
-        geom = row.geometry
-        if geom.type.startswith('Multi'):
-            for part in geom:
-                row2 = row.copy()
-                row2.geometry = part
-                res.append(row2)
-        else:
-                res.append(row)
+		# Split Multi geomries
+		res = []
+		for row in no_coll:
+			geom = row.geometry
+			if geom.type.startswith('Multi'):
+				for part in geom:
+					row2 = row.copy()
+					row2.geometry = part
+					res.append(row2)
+			else:
+					res.append(row)
 
-    return gpd.GeoDataFrame(res, crs=vec.crs).reset_index(drop=True)
+		return gpd.GeoDataFrame(res, crs=vec.crs).reset_index(drop=True)
 
-def write_geojson(vec:gpd.GeoDataFrame, dest):
-    """Write only polygons, including attributes"""
-    dest = str(dest)
-    check_types(write_geojson, locals())
+if USE_GEOPANDAS:
+	def write_geojson(vec:gpd.GeoDataFrame, dest):
+		"""Write only polygons, including attributes"""
+		dest = str(dest)
+		check_types(write_geojson, locals())
 
-    # WGS 84
-    #vec = vec.to_crs({'init': 'epsg:4326'})
+		# WGS 84
+		#vec = vec.to_crs({'init': 'epsg:4326'})
 
-    if os.path.isfile(dest):
-        os.remove(dest)
-        
-    vec.to_file(dest, driver='GeoJSON', encoding='utf-8')
+		if os.path.isfile(dest):
+			os.remove(dest)
+			
+		vec.to_file(dest, driver='GeoJSON', encoding='utf-8')
 
 
 def super_overlay(folder, name, depth, x0, y0, x1, y1):
@@ -651,3 +657,8 @@ def tif2png(source, dest):
     img.putdata(newData)
     img.save(dest, "PNG")
     
+def write_sqlite(db_file, df_dict):
+    db_conn = sqlite3.connect(db_file)
+    for tab_name in df_dict:
+        df_dict[tab_name].to_sql(tab_name, db_conn, if_exists="replace", index=None)
+    db_conn.close()
