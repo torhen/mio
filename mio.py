@@ -30,6 +30,11 @@ import affine
 import inspect
 from typing import Union, List, Dict, get_type_hints
 
+def console(text):
+    ts = str(datetime.datetime.now())[0:19]
+    b = bytes(f'>> {ts} {text}\n', encoding='latin-1')
+    os.write(1, b)
+
 def get_time():
     print(str(datetime.datetime.now())[0:19])
 
