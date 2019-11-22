@@ -675,4 +675,4 @@ def write_json(obj, filename, pretty=True):
     else:
         indent = None
     with open(filename, 'w', encoding='utf-8') as fout:
-        json.dump(dic, fout,  ensure_ascii=False, indent=indent)
+        json.dump(obj, fout,  ensure_ascii=False, indent=indent)
