@@ -7,6 +7,7 @@ import subprocess, time, datetime
 from PIL import Image
 import pathlib
 import sqlite3
+import json
 
 if USE_GEOPANDAS:
 	import geopandas as gpd
@@ -667,3 +668,11 @@ def write_sqlite(db_file, df_dict):
     for tab_name in df_dict:
         df_dict[tab_name].to_sql(tab_name, db_conn, if_exists="replace", index=None)
     db_conn.close()
+
+def write_json(obj, filename, pretty=True):
+    if pretty:
+        indent = 4
+    else:
+        indent = None
+    with open(filename, 'w', encoding='utf-8') as fout:
+        json.dump(dic, fout,  ensure_ascii=False, indent=indent)
