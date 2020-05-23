@@ -681,12 +681,12 @@ def days_per_month(first_day, last_day):
     """return dictionary of month with mumber of days"""
     first_day = pd.to_datetime(first_day)
     last_day = pd.to_datetime(last_day)
- 
-    l = pd.date_range(first_day, last_day + pd.DateOffset(months=1), freq='M')
+
+    l = pd.date_range(first_day.replace(day=1), last_day.replace(day=1), freq='MS')
+
     dic = {}
-    
     for e in l:
-        dic[str(e)[0:7]] = e.day
+        dic[str(e)[0:7]] = pd.Period(str(e)).daysinmonth
     
     # patch first and last month
     dic[str(l[0])[0:7]] = dic[str(l[0])[0:7]] - first_day.day + 1
