@@ -676,3 +676,21 @@ def write_json(obj, filename, pretty=True):
         indent = None
     with open(filename, 'w', encoding='utf-8') as fout:
         json.dump(obj, fout,  ensure_ascii=False, indent=indent)
+		
+def days_per_month(first_day, last_day):
+    """return dictionary of month with mumber of days"""
+    first_day = pd.to_datetime(first_day)
+    last_day = pd.to_datetime(last_day)
+ 
+    l = pd.date_range(first_day, last_day + pd.DateOffset(months=1), freq='M')
+    dic = {}
+    
+    for e in l:
+        dic[str(e)[0:7]] = e.day
+    
+    # patch first and last month
+    dic[str(l[0])[0:7]] = dic[str(l[0])[0:7]] - first_day.day + 1
+    dic[str(l[-1])[0:7]] = last_day.day
+    
+    return dic
+
