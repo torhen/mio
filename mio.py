@@ -340,11 +340,6 @@ if USE_GEOPANDAS:
 			check_types(write_tab, locals())	
 			gdf=gdf.copy()
 
-			# int64 seems not to work anymore
-			for col in gdf:
-				dt = gdf[col].dtypes
-				if dt == 'int32' or dt == 'int64':
-					gdf[col] = gdf[col].astype('float64')
 
 			# bring multi to reduce object types (Fiona can save only on)
 			def to_multi(geom):
@@ -374,7 +369,7 @@ if USE_GEOPANDAS:
 			for col,typ in gdf.dtypes.iteritems():
 				if col!=gdf.geometry.name:
 					if str(typ).startswith('int'):
-						styp='int'
+						styp='int32'
 					elif str(typ).startswith('float'):
 						styp='float'
 					else:
