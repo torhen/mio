@@ -9,6 +9,8 @@ import pathlib
 import sqlite3
 import json
 
+pd.options.display.max_columns = 200
+
 if USE_GEOPANDAS:
 	import geopandas as gpd
 	from shapely.geometry import Point, Polygon, MultiPolygon, LineString, MultiLineString, shape
@@ -17,19 +19,12 @@ if USE_GEOPANDAS:
 	import rasterio.mask
 	import fiona
 	import shapely
-	if rasterio.__version__[0]=='0':
-		print('WARNING! This old rasterio (%s) version has a bug in vectorizing!' % rasterio.__version__)
-		print('try: conda install -c conda-forge/label/dev rasterio')
-		print('to install version 1.x')
 	
-from IPython.display import HTML
 import matplotlib.pyplot as plt
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 import win32com.client
 import affine
-import inspect
-from typing import Union, List, Dict, get_type_hints
 
 def console(text):
     ts = str(datetime.datetime.now())[0:19]
@@ -43,28 +38,6 @@ def colset(df, cols_dic):
     """ filter and rename columns in one step"""
     return df[list(cols_dic)].rename(columns=cols_dic)
 
-def snap(df, fn=lambda x: x.shape, msg=None):
-    """ Custom Help function to print things in method chaining.
-        Returns back the df to further use in chaining.
-    """
-    if msg:
-        print(msg)
-    print(fn(df))
-    return df
-
-# strict type checking support
-def check_types(func, loca):
-  
-    hints = get_type_hints(func)
-    # iterate all type hints
-    for attr_name, attr_type in hints.items():
-        if attr_name == 'return':
-            continue
-
-        if not isinstance(loca[attr_name], attr_type):
-            raise TypeError(
-                'Argument %r is not of type %s' % (attr_name, attr_type)
-            )
 
 # cou can get the WKT string unsing ogrinfor file layer
 WKT_SWISS="""PROJCS["unnamed",
@@ -159,9 +132,9 @@ def read_dbf(dbfile):
 	pl.columns = [a.split('\x00')[0] for a in pl.columns] # remove strange characters in columns
 	return pl
 
-def run_nb(ju_nb:str):
+def run_nb(ju_nb):
 	"""Execute a jupyter notebook"""
-	check_types(run_nb, locals())
+
 	if len(sys.argv)>2:
 		os.environ["JUPYTER_PARAMETER"] = sys.argv[2]
 	else:
@@ -253,7 +226,6 @@ def write_raster(df_list:pd.DataFrame, dest_file, color_map=0):
 
 def calc_affine(df):
 	"""generate transorm affine object from raster data frame """
-	check_types(calc_affine, locals())
 	x0 = df.columns[0]
 	y0 = df.index[0]
 	dx = df.columns[1] - df.columns[0]
@@ -263,9 +235,8 @@ def calc_affine(df):
 	# y0 - dy because anker point is in the south!
 	return t
 
-def vectorize(df:pd.DataFrame):
+def vectorize(df):
 	""" make shapes from raster, genial! """
-	check_types(vectorize, locals())
 	t = calc_affine(df)
 	a = df.values
 	# zeros an nan are left open space, means mask = True!
@@ -284,7 +255,7 @@ def vectorize(df:pd.DataFrame):
 if USE_GEOPANDAS:
 	def rasterize(vector_gdf:gpd.GeoDataFrame, raster_df, values_to_burn=128, fill:int=0, all_touched:bool=False):
 		""" burn vector features into a raster, input ruster or resolution"""
-		check_types(rasterize, locals())
+
 		# raster_df is integer, create raster with resolution raster_df 
 		if isinstance(raster_df, int):
 			res = raster_df
@@ -318,7 +289,6 @@ if USE_GEOPANDAS:
 def refresh_excel(excel_file):
 	"""refreshe excel data and pivot tables"""
 	excel_file = str(excel_file)
-	check_types(refresh_excel, locals())
 	excel_file=os.path.abspath(excel_file)
 	xlapp = win32com.client.DispatchEx("Excel.Application")
 	wb = xlapp.workbooks.open(excel_file)
@@ -334,84 +304,84 @@ def refresh_excel(excel_file):
 	xlapp.Quit()
 
 if USE_GEOPANDAS:
-		def write_tab(gdf:gpd.GeoDataFrame, tab_name ,crs_wkt:str=WKT_SWISS):
-			"""Write Mapinfo format, all geometry types in one file"""
-			tab_name = str(tab_name)
-			check_types(write_tab, locals())	
-			gdf=gdf.copy()
+	def write_tab(gdf, tab_name, crs_wkt=WKT_SWISS):
+		"""Write Mapinfo format, all geometry types in one file"""
 
+		
+		tab_name = str(tab_name)
+		gdf=gdf.copy()
+		gdf.crs = crs_wkt
 
-			# bring multi to reduce object types (Fiona can save only on)
-			def to_multi(geom):
-				if geom.type=='Polygon':
-					return MultiPolygon([geom])
-				elif geom.type=='Line':
-					return MultiLine([geom])        
+		# bring multi to reduce object types (Fiona can save only on)
+		def to_multi(geom):
+			if geom.type=='Polygon':
+				return MultiPolygon([geom])
+			elif geom.type=='Line':
+				return MultiLine([geom])        
+			else:
+				return geom
+
+		gdf.geometry=[to_multi(geom) for geom in gdf.geometry]
+
+		# make the columns fit for Mapinfo
+		new_cols=[]
+		for s in gdf.columns:
+			s=''.join([c if c.isalnum() else '_' for c in s])
+			for i in range(5):
+				s=s.replace('__','_')
+			s=s.strip('_')
+			s=s[0:30]
+
+			new_cols.append(s)
+		gdf.columns=new_cols
+
+		# create my own schema (without schema all strings are 254)
+		props={}
+		for col,typ in gdf.dtypes.iteritems():
+			if col!=gdf.geometry.name:
+				if str(typ).startswith('int'):
+					styp='int32'
+				elif str(typ).startswith('float'):
+					styp='float'
 				else:
-					return geom
+					gdf[col]=gdf[col].astype('str')  
+					max_len=gdf[col].map(len).max()
+					if np.isnan(max_len):
+						max_len=1
+					styp='str:%d' % max_len
+				props[col]=styp
 
-			gdf.geometry=[to_multi(geom) for geom in gdf.geometry]
+		schema={}
+		# set geometry type of the first object for the whole layer
+		if len(gdf)>0:
+			geo_obj_type=gdf.geometry.iloc[0].geom_type
 
-			# make the columns fit for Mapinfo
-			new_cols=[]
-			for s in gdf.columns:
-				s=''.join([c if c.isalnum() else '_' for c in s])
-				for i in range(5):
-					s=s.replace('__','_')
-				s=s.strip('_')
-				s=s[0:30]
+		else:
+			geo_obj_type = 'Point'
 
-				new_cols.append(s)
-			gdf.columns=new_cols
-					   
-			# create my own schema (without schema all strings are 254)
-			props={}
-			for col,typ in gdf.dtypes.iteritems():
-				if col!=gdf.geometry.name:
-					if str(typ).startswith('int'):
-						styp='int32'
-					elif str(typ).startswith('float'):
-						styp='float'
-					else:
-						gdf[col]=gdf[col].astype('str')  
-						max_len=gdf[col].map(len).max()
-						if np.isnan(max_len):
-							max_len=1
-						styp='str:%d' % max_len
-					props[col]=styp
-					
-			schema={}
-			# set geometry type of the first object for the whole layer
-			if len(gdf)>0:
-				geo_obj_type=gdf.geometry.iloc[0].geom_type
+		schema['geometry']= geo_obj_type
 
-			else:
-				geo_obj_type = 'Point'
-				
-			schema['geometry']= geo_obj_type
-				
-			schema['properties']=props
-			   
-			# delete files if already there, otherwise an error is raised
-			base_dest,ext_dest= os.path.splitext(tab_name)
-			if ext_dest.lower()=='.tab':
-				ext_list=['.tab','.map,','.dat','.id']
-			elif ext_dest.lower()=='.mif':
-				ext_list=['.mif','.mid']
-			else:
-				sys.exit("ERROR: extension of '%s' should be .tab or .mif." % tab_name)
+		schema['properties']=props
 
-			for ext in ext_list:
-				file = base_dest + ext
-				if os.path.isfile(file):
-					os.remove(file)
+		# delete files if already there, otherwise an error is raised
+		base_dest,ext_dest= os.path.splitext(tab_name)
+		if ext_dest.lower()=='.tab':
+			ext_list=['.tab','.map,','.dat','.id']
+		elif ext_dest.lower()=='.mif':
+			ext_list=['.mif','.mid']
+		else:
+			sys.exit("ERROR: extension of '%s' should be .tab or .mif." % tab_name)
 
-			gdf.to_file(tab_name,driver='MapInfo File',crs_wkt=crs_wkt,schema=schema)    
-			return print(len(gdf), 'rows of type', geo_obj_type, 'written to mapinfo file.')
-	
+		for ext in ext_list:
+			file = base_dest + ext
+			if os.path.isfile(file):
+				os.remove(file)
+
+		gdf.to_file(tab_name,driver='MapInfo File',schema=schema)    
+		return print(len(gdf), 'rows of type', geo_obj_type, 'written to mapinfo file.')
+		
 def swiss_wgs(sX,sY):
 	"""Aprroximation CH1903 -> WGS84 https://de.wikipedia.org/wiki/Schweizer_Landeskoordinaten"""
-	check_types(swiss_wgs, locals())
 	sX=str(sX)
 	sY=str(sY)
 
@@ -428,7 +398,7 @@ def swiss_wgs(sX,sY):
 
 def wgs_swiss(sLon, sLat):
 	"""Aprroximation WGS84 -> CH1903 https://de.wikipedia.org/wiki/Schweizer_Landeskoordinaten"""
-	check_types(wgs_swiss, locals())
+
 	sLon=str(sLon)
 	sLat=str(sLat)
 
@@ -442,17 +412,26 @@ def wgs_swiss(sLon, sLat):
 		return (x,y)
 	else:
 		return (-1,-1)
+		
+def conv_wgs_swiss (llon, llat, resolution=1):
+    lx = []
+    ly = []
+    for xy in zip(llon, llat):
+        x, y = wgs_swiss(*xy)
+        x = x // resolution * resolution
+        y = y // resolution * resolution
+        lx.append(x)
+        ly.append(y)
+    return lx, ly
     
-def run(str_or_list:Union[str,list]):
+def run(str_or_list):
 	"""Better replacement for os.system()"""
-	check_types(run, locals())
 	subprocess.run(str_or_list, check=True, shell=True)	
 
 def run_mb(mb_script:str, mapinfo_path=''):
 	"""Run Mapbasic string as mapbasic script
 mapinfow.exe and mapbascic : both paths must be set in the PATH env variable!
 	"""
-	check_types(run_mb, locals())
 	wd = os.getcwd()
 
 	path_mb = os.path.join(wd, 'mb.mb')
@@ -478,7 +457,6 @@ mapinfow.exe and mapbascic : both paths must be set in the PATH env variable!
 if USE_GEOPANDAS:
 	def disagg(vec:gpd.GeoDataFrame):
 		"""Dissagregate collections and multi geomtries"""
-		check_types(disagg, locals())
 		# Split GeometryCollections
 		no_coll = []
 		for i, row in vec.iterrows():
@@ -510,7 +488,6 @@ if USE_GEOPANDAS:
 	def write_geojson(vec:gpd.GeoDataFrame, dest):
 		"""Write only polygons, including attributes"""
 		dest = str(dest)
-		check_types(write_geojson, locals())
 
 		# WGS 84
 		#vec = vec.to_crs({'init': 'epsg:4326'})
@@ -521,62 +498,8 @@ if USE_GEOPANDAS:
 		vec.to_file(dest, driver='GeoJSON', encoding='utf-8')
 
 
-def super_overlay(folder, name, depth, x0, y0, x1, y1):
-    import xmltodict
-    """
-    Create a super_overlay
-    https://developers.google.com/kml/documentation/regions
-    """
-    minLodPixels=256
-    # end clause for recurstion
-    if len([c for c in name if c in '0123']) > depth:
-        return
-    
-    res = {'kml':{}}
-    res['kml']['Document'] = {'name':name}
-    # Own Region
-    res['kml']['Document']['Region'] = {}
-    res['kml']['Document']['Region']['Lod'] = {'minLodPixels':minLodPixels,'maxLodPixels':-1}
-    res['kml']['Document']['Region']['LatLonAltBox'] = {'west':x0, 'east':x1, 'south':y0, 'north':y1}
-
-    # Own Overlay
-    res['kml']['Document']['GroundOverlay'] = {}
-    res['kml']['Document']['GroundOverlay']['Icon'] = {'href':f'{name}.png'}
-    res['kml']['Document']['GroundOverlay']['LatLonAltBox'] = {'west':x0, 'east':x1, 'south':y0, 'north':y1}
-
-    # Networklinks to children
-    dx = x0 + (x1 - x0) / 2
-    dy = y0 + (y1 - y0) / 2
-    params = [
-        {'folder':folder, 'name':name + '0', 'depth':depth, 'x0':x0, 'y0':dy, 'x1':dx, 'y1':y1},
-        {'folder':folder, 'name':name + '1', 'depth':depth, 'x0':dx, 'y0':dy, 'x1':x1, 'y1':y1},
-        {'folder':folder, 'name':name + '2', 'depth':depth, 'x0':x0, 'y0':y0, 'x1':dx, 'y1':dy},
-        {'folder':folder, 'name':name + '3', 'depth':depth, 'x0':dx, 'y0':y0, 'x1':x1, 'y1':dy}
-    ]
-
-    res['kml']['Document']['NetworkLink'] = []
-    for param in params:
-        folder_, name_, depth_, x0_, y0_, x1_, y1_ = param
-        nwl  = {'name':param['name']}
-        nwl['Region'] = {}
-        nwl['Region']['Lod'] = {'minLodPixels':minLodPixels, 'maxLodPixels':-1}
-        nwl['Region']['LatLonAltBox'] = {'west':param['x0'], 'east':param['x1'], 'south':param['y0'], 'north':param['y0']}
-        nwl['Link'] = {'href':param['name'] + '.kml', 'viewRefreshMode':'onRegion'}
-        res['kml']['Document']['NetworkLink'].append(nwl)
-        
-        # Recursion!!!
-        super_overlay(**param)
-        
-    s = xmltodict.unparse(res, pretty=True)
-    
-    with open(f'{folder}/{name}.kml', 'w') as fout:
-        fout.write(s)
-        
-    return 
-
 def read_loss(los_file):
     los_file = str(los_file)
-    check_types(read_loss, locals())
     basename = os.path.basename(los_file)
     dbf_path = os.path.dirname(los_file)
     dbf_path = os.path.join(dbf_path, 'pathloss.dbf')
@@ -600,64 +523,9 @@ def read_loss(los_file):
     return df
 
 def show_perc(i:int, iall:int, istep:int):
-    check_types(show_perc, locals())
     if i % istep == 0:
         print(f'{round(100*i/iall,2)}%', end=' ')
-        
-def file_title(path:str):
-    check_types(file_title, locals())
-    return os.path.splitext(os.path.basename(path))[0]
-
-def raster2wgs(source_file, dest_file):
-    source_file = str(source_file)
-    dest_file = str(dest_file)
-    check_types(raster2wgs, locals())
-    if not os.path.join(os.environ.get('GDAL_DATA'), 'gcs.csv'):
-        print('set GDAL_DATA environment variable')
-        return
-
-    dst_crs = 'EPSG:4326'
-
-    with rasterio.open(source_file) as src:
-        transform, width, height = rasterio.warp.calculate_default_transform(
-            src.crs, dst_crs, src.width, src.height, *src.bounds)
-        kwargs = src.meta.copy()
-        kwargs.update({
-            'crs': dst_crs,
-            'transform': transform,
-            'width': width,
-            'height': height
-        })
-
-        with rasterio.open(dest_file, 'w', **kwargs) as dst:
-            for i in range(1, src.count + 1):
-                rasterio.warp.reproject(
-                    source=rasterio.band(src, i),
-                    destination=rasterio.band(dst, i),
-                    src_transform=src.transform,
-                    src_crs=src.crs,
-                    dst_transform=transform,
-                    dst_crs=dst_crs,
-                    resampling=rasterio.warp.Resampling.nearest)
-            bounds = dst.bounds
-    return bounds
-
-def tif2png(source, dest):
-    check_types(tif2png, locals())
-    source = str(source)
-    dest = dest(source)
-    img = Image.open(source)
-    img = img.convert("RGBA")
-    data = img.getdata()
-    newData = []
-    for item in data:
-        if item[0] == 0 and item[1] == 0 and item[2] == 0:
-            newData.append((255, 255, 255, 0))
-        else:
-            newData.append(item)
-    img.putdata(newData)
-    img.save(dest, "PNG")
-    
+          
 def write_sqlite(db_file, df_dict):
     db_conn = sqlite3.connect(db_file)
     for tab_name in df_dict:
