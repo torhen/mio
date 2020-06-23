@@ -1,3 +1,4 @@
+# v2.0
 USE_GEOPANDAS = True
 
 import sys,os,datetime
@@ -307,78 +308,14 @@ if USE_GEOPANDAS:
 	def write_tab(gdf, tab_name, crs_wkt=WKT_SWISS):
 		"""Write Mapinfo format, all geometry types in one file"""
 
-		
-		tab_name = str(tab_name)
-		gdf=gdf.copy()
-		gdf.crs = crs_wkt
+		gdf = gdf.reset_index()
+		for col in gdf.columns:
+			stype = str(gdf[col].dtype)
+			if stype.startswith('int'):
+				gdf[col] = gdf[col].astype(float)
 
-		# bring multi to reduce object types (Fiona can save only on)
-		def to_multi(geom):
-			if geom.type=='Polygon':
-				return MultiPolygon([geom])
-			elif geom.type=='Line':
-				return MultiLine([geom])        
-			else:
-				return geom
-
-		gdf.geometry=[to_multi(geom) for geom in gdf.geometry]
-
-		# make the columns fit for Mapinfo
-		new_cols=[]
-		for s in gdf.columns:
-			s=''.join([c if c.isalnum() else '_' for c in s])
-			for i in range(5):
-				s=s.replace('__','_')
-			s=s.strip('_')
-			s=s[0:30]
-
-			new_cols.append(s)
-		gdf.columns=new_cols
-
-		# create my own schema (without schema all strings are 254)
-		props={}
-		for col,typ in gdf.dtypes.iteritems():
-			if col!=gdf.geometry.name:
-				if str(typ).startswith('int'):
-					styp='int32'
-				elif str(typ).startswith('float'):
-					styp='float'
-				else:
-					gdf[col]=gdf[col].astype('str')  
-					max_len=gdf[col].map(len).max()
-					if np.isnan(max_len):
-						max_len=1
-					styp='str:%d' % max_len
-				props[col]=styp
-
-		schema={}
-		# set geometry type of the first object for the whole layer
-		if len(gdf)>0:
-			geo_obj_type=gdf.geometry.iloc[0].geom_type
-
-		else:
-			geo_obj_type = 'Point'
-
-		schema['geometry']= geo_obj_type
-
-		schema['properties']=props
-
-		# delete files if already there, otherwise an error is raised
-		base_dest,ext_dest= os.path.splitext(tab_name)
-		if ext_dest.lower()=='.tab':
-			ext_list=['.tab','.map,','.dat','.id']
-		elif ext_dest.lower()=='.mif':
-			ext_list=['.mif','.mid']
-		else:
-			sys.exit("ERROR: extension of '%s' should be .tab or .mif." % tab_name)
-
-		for ext in ext_list:
-			file = base_dest + ext
-			if os.path.isfile(file):
-				os.remove(file)
-
-		gdf.to_file(tab_name,driver='MapInfo File',schema=schema)    
-		return print(len(gdf), 'rows of type', geo_obj_type, 'written to mapinfo file.')
+		gdf.to_file(tab_name,driver='MapInfo File')    
+		return print(len(gdf), 'row(s) written to mapinfo file.')
 		
 def swiss_wgs(sX,sY):
 	"""Aprroximation CH1903 -> WGS84 https://de.wikipedia.org/wiki/Schweizer_Landeskoordinaten"""
