@@ -122,7 +122,9 @@ def check_folders(*folders):
             print(f'MISSING FOLDER: {abs_path}')
             ret = False
     return ret
-    
+
+def file_title(path:str):
+    return os.path.splitext(os.path.basename(path))[0]
 
 def read_dbf(dbfile):
 	"""read dbase file"""
@@ -309,6 +311,7 @@ if USE_GEOPANDAS:
 		"""Write Mapinfo format, all geometry types in one file"""
 
 		gdf = gdf.reset_index()
+		gdf.crs = WKT_SWISS
 		for col in gdf.columns:
 			stype = str(gdf[col].dtype)
 			if stype.startswith('int'):
