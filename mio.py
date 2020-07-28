@@ -307,17 +307,16 @@ def refresh_excel(excel_file):
 	xlapp.Quit()
 
 if USE_GEOPANDAS:
-	def write_tab(gdf, tab_name, crs_wkt=WKT_SWISS):
+	def write_tab(gdf, tab_name, crs_wkt=WKT_SWISS, index=None):
 		"""Write Mapinfo format, all geometry types in one file"""
 
-		gdf = gdf.reset_index()
 		gdf.crs = WKT_SWISS
 		for col in gdf.columns:
 			stype = str(gdf[col].dtype)
 			if stype.startswith('int'):
 				gdf[col] = gdf[col].astype(float)
 
-		gdf.to_file(tab_name,driver='MapInfo File')    
+		gdf.to_file(tab_name,driver='MapInfo File', index=index)    
 		return print(len(gdf), 'row(s) written to mapinfo file.')
 		
 def swiss_wgs(sX,sY):
