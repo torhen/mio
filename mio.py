@@ -311,10 +311,17 @@ if USE_GEOPANDAS:
 		"""Write Mapinfo format, all geometry types in one file"""
 
 		gdf.crs = WKT_SWISS
+		
+		# fiona can't write integer columns, convert columns to float
 		for col in gdf.columns:
 			stype = str(gdf[col].dtype)
 			if stype.startswith('int'):
 				gdf[col] = gdf[col].astype(float)
+				
+		# fiona can't write integer columns, convert index to float
+		stype = str(gdf.index.dtype)
+		if stype.startswith('int'):
+			gdf.index = gdf.index.astype(float)
 
 		gdf.to_file(tab_name,driver='MapInfo File', index=index)    
 		return print(len(gdf), 'row(s) written to mapinfo file.')
