@@ -12,6 +12,9 @@ import json
 
 pd.options.display.max_columns = 200
 
+def now():
+    return str(datetime.datetime.now())[0:19]
+
 if USE_GEOPANDAS:
 	import geopandas as gpd
 	from shapely.geometry import Point, Polygon, MultiPolygon, LineString, MultiLineString, shape
@@ -292,7 +295,7 @@ if USE_GEOPANDAS:
 def refresh_excel(excel_file):
 	"""refreshe excel data and pivot tables"""
 	excel_file = str(excel_file)
-	excel_file=os.path.abspath(excel_file)
+	excel_file = os.path.abspath(excel_file)
 	xlapp = win32com.client.DispatchEx("Excel.Application")
 	wb = xlapp.workbooks.open(excel_file)
 	xlapp.Visible = True
@@ -502,4 +505,34 @@ def days_per_month(first_day, last_day):
     dic[str(l[-1])[0:7]] = last_day.day
     
     return dic
+	
+def make_raster_kml(source_file, dest_file):
+    cmd = f'gdalwarp -s_srs EPSG:21781 -t_srs EPSG:4326 -overwrite {source_file} {dest_file}'
+    os.system(cmd)
+            
+    ds = rasterio.open(dest_file)
+    x0, y0, x1, y1 = ds.bounds
+    print(x0, x1, y0, y1)
+
+    s = f"""<kml>
+      <Folder>
+        <name>Ground Overlays</name>
+        <GroundOverlay>
+          <name>GSM</name>
+          <Icon>
+            <href>{dest_file}</href>
+          </Icon>
+          <LatLonBox>
+            <west>{x0}</west>
+            <east>{x1}</east>
+            <south>{y0}</south>
+            <north>{y1}</north>
+          </LatLonBox>
+        </GroundOverlay>
+      </Folder>
+    </kml>
+    """
+    kml_file = pathlib.Path(dest_file).stem + '.kml'
+    with open(kml_file, 'w') as fout:
+        fout.write(s)
 
