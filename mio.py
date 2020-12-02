@@ -506,7 +506,16 @@ def days_per_month(first_day, last_day):
     
     return dic
 	
-def make_raster_kml(source_file, dest_kml_file):
+def black2trasparent(source_pic, dest_png):
+    img = Image.open(source_pic).convert("RGBA")
+    data = np.asarray(img).copy()
+    data[:, :, 3] = (255 * (data[:, :, :3] != 0).any(axis=2)).astype(np.uint8)
+    img2 = Image.fromarray(data)
+    img2.save(dest_png, "PNG")
+
+def make_raster_kml(source_file, dest_kml_file, name=None):
+
+    assert pathlib.Path(source_file).is_file(), f'file {source_file} not found.'
     # creade destination filenames
     dest_kml = pathlib.Path(dest_kml_file).with_suffix('.kml')
     dest_png = pathlib.Path(dest_kml_file).with_suffix('.png')
@@ -515,20 +524,19 @@ def make_raster_kml(source_file, dest_kml_file):
     cmd = f'gdalwarp -s_srs EPSG:21781 -t_srs EPSG:4326 -overwrite "{source_file}" tmp.tif'
     os.system(cmd)
     
-    print(f'convert tmp.tif to {dest_png}')
-    cmd = f'gdal_translate tmp.tif "{dest_png}"'
-    os.system(cmd)
-    assert dest_png.is_file()
+    print(f'convert to transparent {dest_png}')
+    black2trasparent('tmp.tif', dest_png)
     
     ds = rasterio.open('tmp.tif')
     x0, y0, x1, y1 = ds.bounds
     print('bounds:', x0, x1, y0, y1)
+    
+    if name is None:
+        name = dest_kml.stem
 
     s = f"""<kml>
-      <Folder>
-        <name>Ground Overlays</name>
         <GroundOverlay>
-          <name>GSM</name>
+          <name>{name}</name>
           <Icon>
             <href>{dest_png}</href>
           </Icon>
@@ -539,9 +547,7 @@ def make_raster_kml(source_file, dest_kml_file):
             <north>{y1}</north>
           </LatLonBox>
         </GroundOverlay>
-      </Folder>
     </kml>
     """
     print('write', dest_kml)
     dest_kml.write_text(s)
-
