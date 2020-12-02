@@ -506,13 +506,23 @@ def days_per_month(first_day, last_day):
     
     return dic
 	
-def make_raster_kml(source_file, dest_file):
-    cmd = f'gdalwarp -s_srs EPSG:21781 -t_srs EPSG:4326 -overwrite {source_file} {dest_file}'
+def make_raster_kml(source_file, dest_kml_file):
+    # creade destination filenames
+    dest_kml = pathlib.Path(dest_kml_file).with_suffix('.kml')
+    dest_png = pathlib.Path(dest_kml_file).with_suffix('.png')
+
+    print('create tmp.tif as WGS84')
+    cmd = f'gdalwarp -s_srs EPSG:21781 -t_srs EPSG:4326 -overwrite "{source_file}" tmp.tif'
     os.system(cmd)
-            
-    ds = rasterio.open(dest_file)
+    
+    print(f'convert tmp.tif to {dest_png}')
+    cmd = f'gdal_translate tmp.tif "{dest_png}"'
+    os.system(cmd)
+    assert dest_png.is_file()
+    
+    ds = rasterio.open('tmp.tif')
     x0, y0, x1, y1 = ds.bounds
-    print(x0, x1, y0, y1)
+    print('bounds:', x0, x1, y0, y1)
 
     s = f"""<kml>
       <Folder>
@@ -520,7 +530,7 @@ def make_raster_kml(source_file, dest_file):
         <GroundOverlay>
           <name>GSM</name>
           <Icon>
-            <href>{dest_file}</href>
+            <href>{dest_png}</href>
           </Icon>
           <LatLonBox>
             <west>{x0}</west>
@@ -532,7 +542,6 @@ def make_raster_kml(source_file, dest_file):
       </Folder>
     </kml>
     """
-    kml_file = pathlib.Path(dest_file).stem + '.kml'
-    with open(kml_file, 'w') as fout:
-        fout.write(s)
+    print('write', dest_kml)
+    dest_kml.write_text(s)
 
