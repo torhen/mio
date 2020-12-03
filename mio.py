@@ -538,7 +538,7 @@ def make_raster_kml(source_file, dest_kml_file, name=None):
         <GroundOverlay>
           <name>{name}</name>
           <Icon>
-            <href>{dest_png}</href>
+            <href>{dest_png.name}</href>
           </Icon>
           <LatLonBox>
             <west>{x0}</west>
