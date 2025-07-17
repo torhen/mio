@@ -1,4 +1,4 @@
-# v2.0
+# v2.1
 USE_GEOPANDAS = True
 
 import sys,os,datetime
@@ -9,8 +9,45 @@ from PIL import Image
 import pathlib
 import sqlite3
 import json
+import xlwings as xw
+import openpyxl
+from copy import copy
+import sqlalchemy
+pd.options.display.max_columns = 0
 
-pd.options.display.max_columns = 200
+# --------- Database connections ----------
+def read_sql(sql, database, make_upper=True):
+
+    if database.upper() == 'NETSITE':  
+        con = sqlalchemy.create_engine('oracle://bo_readonly:reporter@pnsite01')
+    elif database.upper() == 'DPI':
+        con = sqlalchemy.create_engine('oracle://DPIREAD:DPIREAD@p1dpich')
+    elif database.upper() == 'ATOLL':
+        con = sqlalchemy.create_engine('oracle://COVERAGE_MAPS:COST!231%Walfisch$Ikegami@p1forch')
+    elif database.upper() == 'MCMS' or database.upper() == 'PMD':
+        con = sqlalchemy.create_engine('oracle://PMDREAD:PMDREAD@ppmd01')
+    elif database.upper() == 'SIP':
+        # con_ip = cx_Oracle.connect('READONLY', 'R35d0nly', 'PSIP01')
+        con = sqlalchemy.create_engine('oracle://READONLY:R35d0nly@PSIP01')
+    elif database.upper() == 'DWH' or database.upper() == 'TERA' or database.upper() == 'TERADATA':
+        #pip install teradatasqlalchemy
+        con = sqlalchemy.create_engine(f'teradatasql://FnwserverA:Fnwserver%40Teradata20%218@P1EDWCH') # @ in the password coded!
+    else:
+        assert False, f"Dont't know database {database}"
+
+    data = pd.read_sql(sql, con)
+    
+    if make_upper:
+            data = data.rename(columns=str.upper)
+    return data
+
+
+
+def join_ordered(l):
+    l = [str(s) for s in l if pd.notnull(s)]
+    l = list(set(l))
+    l.sort()
+    return ';'.join(l)
 
 def now():
     return str(datetime.datetime.now())[0:19]
@@ -306,11 +343,20 @@ def refresh_excel(excel_file):
 		pivotCount = ws.PivotTables().Count
 		for j in range(1, pivotCount+1):
 			ws.PivotTables(j).PivotCache().Refresh()
+	xlapp.CalculateUntilAsyncQueriesDone()
+	xlapp.DisplayAlerts = False
 	wb.Save()
 	xlapp.Quit()
+	
+def delete_mapinfo_files(tab_name):
+    base = os.path.splitext(tab_name)[0]
+    for ext in ['tab', 'dat', 'id', 'map']:
+        path = f"{base}.{ext}"
+        if os.path.exists(path):
+            os.remove(path)
 
 if USE_GEOPANDAS:
-	def write_tab(gdf, tab_name, crs_wkt=WKT_SWISS, index=None):
+	def write_tab(gdf, tab_name, crs_wkt=WKT_SWISS, index=False, encoding='latin1'):
 		"""Write Mapinfo format, all geometry types in one file"""
 
 		gdf.crs = WKT_SWISS
@@ -325,8 +371,10 @@ if USE_GEOPANDAS:
 		stype = str(gdf.index.dtype)
 		if stype.startswith('int'):
 			gdf.index = gdf.index.astype(float)
+			
+		delete_mapinfo_files(tab_name)
 
-		gdf.to_file(tab_name,driver='MapInfo File', index=index)    
+		gdf.to_file(tab_name,driver='MapInfo File', index=index, encoding=encoding)    
 		return print(len(gdf), 'row(s) written to mapinfo file.')
 		
 def swiss_wgs(sX,sY):
@@ -551,3 +599,164 @@ def make_raster_kml(source_file, dest_kml_file, name=None):
     """
     print('write', dest_kml)
     dest_kml.write_text(s)
+	
+def beep():
+	import winsound
+	winsound.PlaySound(r"C:\Windows\Media\tada.wav", winsound.SND_ASYNC)
+    
+
+def write_excel_with_template(df, target, template, sheet_name, header_start='A2'):
+    """ target must be full windows name"""
+    # open workbook get sheet
+    wb = xw.Book(template)
+    sheet = wb.sheets[sheet_name]
+    
+    # # check if datatframe headers equal to template headers
+    lh = sheet.range(header_start).expand('right').value
+    for i, col in enumerate(df.columns):
+        assert col == lh[i], f'header in column {i} "{col}" != "{lh[i]}"'
+        
+    # write the datafram
+    sheet.range(header_start).options(index=False).value = df
+    
+    # switch off wrap text
+    full_range = sheet.range('A2').expand()
+    sheet.range(full_range).api.WrapText = False
+    
+    # save excel
+    wb.save(target)
+    
+    # close excel
+    wb.app.quit()
+    
+    
+class Excel:
+    def __init__(self, dest_file):
+        self.writer = pd.ExcelWriter(dest_file, engine='xlsxwriter')
+        
+    def write_sheet(self, df, sheet_name, header_font_color='#000000', header_bg_color='#FFFFFF', max_col_len=50):
+        assert not df.columns.duplicated().any(), 'Error: duplicated columns'
+        df.to_excel(excel_writer=self.writer, sheet_name=sheet_name, index=None)
+        
+        workbook  = self.writer.book
+        worksheet = self.writer.sheets[sheet_name]
+        rows = len(df)
+        cols = len(df.columns)
+        
+        # set header format
+        header_format = workbook.add_format({'font_color': header_font_color, 'bg_color': header_bg_color, 'bold': True, 'align': 'left'}) 
+        for i, s in enumerate(df.columns):
+            worksheet.write(0, i, s, header_format)
+            
+        # autofilter
+        worksheet.autofilter(0, 0, rows, cols -1)
+        
+        # autofit
+        for idx, col in enumerate(df):  # loop through all columns
+            series = df[col]
+            max_len = max((
+                series.astype(str).map(len).max(),  # len of largest item
+                len(str(series.name))  # len of column name/header
+                )) + 1  # adding a little extra space
+            if max_len > max_col_len:
+                max_len = max_col_len
+            worksheet.set_column(idx, idx, max_len)  # set column width
+
+        # freeze first row
+        worksheet.freeze_panes(1, 0)
+        
+    def close(self):
+        self.writer.close()
+
+    def save(self):
+        self.writer.close()
+        
+     
+def datetime2date(df):
+    df = df.copy()
+    dtypes = df.dtypes
+    for i, r in dtypes.items():
+        if r == 'datetime64[ns]':
+            df[i] = df[i].dt.date
+    return df
+
+
+def stylize(source, dest, template):
+    print(f'loading workbook "{source}"')
+    wb_nostyle = openpyxl.load_workbook(source)
+    wb_template = openpyxl.load_workbook(template)
+
+    # create explanation row above header
+    for sheetname in wb_nostyle.sheetnames:
+        print(f"loading sheet '{sheetname}'")
+        ws_nostyle = wb_nostyle[sheetname]
+        ws_template = wb_template[sheetname]
+
+
+        ws_nostyle.insert_rows(1)
+        for col_index, cell in enumerate(ws_template[1], start=1):
+            new_cell = ws_nostyle.cell(row=1, column=col_index, value=cell.value)
+
+            # Copy formatting
+            new_cell.font = copy(cell.font)
+            new_cell.fill = copy(cell.fill)
+            new_cell.border = copy(cell.border)
+            new_cell.alignment = copy(cell.alignment)
+            new_cell.number_format = copy(cell.number_format)
+            new_cell.protection = copy(cell.protection)
+            new_cell.alignment = copy(cell.alignment)
+
+
+            col_letter = cell.column_letter
+            ws_nostyle.column_dimensions[col_letter].width = ws_template.column_dimensions[col_letter].width
+
+
+        # set row heigt of explanation row
+        ws_nostyle.row_dimensions[1].height = ws_template.row_dimensions[1].height
+
+        # Set format of header
+        for col_index, cell in enumerate(ws_template[2], start=1):
+
+            # check if header values are correct
+            value_nostyle = ws_nostyle.cell(row=2, column=col_index).value
+            value_template = cell.value
+            letter = openpyxl.utils.get_column_letter(col_index)
+            assert value_nostyle == value_template, f'ERROR in Column {letter} {value_nostyle} != {value_template}'
+
+            new_cell = ws_nostyle.cell(row=2, column=col_index, value=cell.value)
+
+
+            # Copy formatting
+            new_cell.font = copy(cell.font)
+            new_cell.fill = copy(cell.fill)
+            new_cell.border = copy(cell.border)
+            new_cell.alignment = copy(cell.alignment)
+            new_cell.number_format = copy(cell.number_format)
+            new_cell.protection = copy(cell.protection)
+            new_cell.alignment = copy(cell.alignment)
+
+
+        # Determine the range of the table
+        max_row = ws_nostyle.max_row
+        max_col = ws_nostyle.max_column
+        end_col_letter = openpyxl.utils.get_column_letter(max_col)
+
+        # Set AutoFilter for the whole table
+        full_range = f"A2:{end_col_letter}{max_row}"
+        ws_nostyle.auto_filter.ref = full_range
+
+
+        # switching off wordwrap
+        print('switching off wordwrap', end=' ')
+        no_wrap_alignment = openpyxl.styles.Alignment(wrap_text=False)
+        for i, row in enumerate(ws_nostyle[full_range]):
+            if i % 1000 == 0:
+                perc = round(100*i/max_row)
+                # print(f'{perc}%', end=' ')
+                # print('.', end=' ')
+            for cell in row:
+                cell.alignment = no_wrap_alignment
+        print()
+
+    print(f'saving "{dest}"')
+    wb_nostyle.save(dest)
