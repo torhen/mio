@@ -284,14 +284,13 @@ def vectorize(df):
     a = df.values
     # zeros an nan are left open space, means mask = True!
     maske = (df != 0).fillna(True)
-    gdf = gpd.GeoDataFrame()
+    gdf = gpd.GeoDataFrame(geometry=[])
     geoms  = []
     value = []
     for s,v in rasterio.features.shapes(a,transform=t,mask=maske.values):
         geoms.append(shape(s))
         value.append(v)
     gdf['geometry'] = geoms
-    gdf = gdf.set_geometry('geometry')
     gdf['val']=value
     return gdf
 
@@ -425,7 +424,7 @@ def run(str_or_list):
     """Better replacement for os.system()"""
     subprocess.run(str_or_list, check=True, shell=True)	
 
-def run_mb(mb_script:str, mapinfo_path=''):
+def run_mb(mb_script:str):
     """Run Mapbasic string as mapbasic script
 mapinfow.exe and mapbascic : both paths must be set in the PATH env variable!
     """
@@ -443,11 +442,11 @@ mapinfow.exe and mapbascic : both paths must be set in the PATH env variable!
         fout.write(mb_script)
     
     # Compile
-    subprocess.run(['mapbasic.exe', '-D', path_mb], check=True, shell=True)
+    subprocess.run([r'C:\Program Files (x86)\MapInfo\MapBasic\mapbasic.exe', '-D', path_mb], check=True, shell=True)
     
     # Run
     try:
-        subprocess.run([rf'{mapinfo_path}\mapinfow.exe', path_mbx, path_mb], check=True, shell=True)
+        subprocess.run([r"C:\Program Files (x86)\MapInfo\Professional\MapInfow.exe", path_mbx, path_mb], check=True, shell=True)
     except subprocess.CalledProcessError as e:
         print(e)
 
@@ -676,7 +675,7 @@ def datetime2date(df):
     df = df.copy()
     dtypes = df.dtypes
     for i, r in dtypes.items():
-        if r == 'datetime64[ns]':
+        if str(r).startswith('datetime'):
             df[i] = df[i].dt.date
     return df
 
