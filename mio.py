@@ -672,11 +672,12 @@ class Excel:
         
      
 def datetime2date(df):
+    assert df.columns.is_unique
     df = df.copy()
     dtypes = df.dtypes
-    for i, r in dtypes.items():
-        if str(r).startswith('datetime'):
-            df[i] = df[i].dt.date
+    for col_name, dtype in dtypes.items():
+        if str(dtype).startswith('datetime'):
+            df[col_name] = pd.to_datetime(df[col_name]).dt.date
     return df
 
 
