@@ -672,7 +672,6 @@ class Excel:
         
      
 def datetime2date(df):
-    assert df.columns.is_unique
     df = df.copy()
     dtypes = df.dtypes
     for col_name, dtype in dtypes.items():
